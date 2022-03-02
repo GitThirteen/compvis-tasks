@@ -3,8 +3,9 @@ import os
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
+# import matplotlib.patches as patches
 import sys
-import matplotlib.patches as patches
+import configparser as cfgp
 
 '''
 1: Passed
@@ -20,56 +21,38 @@ import matplotlib.patches as patches
 '''
 
 '''
-
-
 TODO: 
 Check acute seperation function behaviour for case 8
 
-Function to view houghlines based on:
-    # view all hough lines detected
-    # lines = lines.squeeze()
-    # for line in lines:
-    #     rho, theta = line
-    #     a = np.cos(theta)
-    #     b = np.sin(theta)
-    #     x0 = a*rho
-    #     y0 = b*rho
-    #     x1 = int(x0 + 1000*(-b))
-    #     y1 = int(y0 + 1000*(a))
-    #     x2 = int(x0 - 1000*(-b))
-    #     y2 = int(y0 - 1000*(a))
-
-    #     cv2.line(img,(x1,y1),(x2,y2),(0,0,255),2)
-    
-    # plt.imshow(img)
-    # plt.show()
-
 EXTRA: Implement auto canny / edge averaging to remove double edges (potentially making code more robust?) 
-
 '''
 
-def check_acute_seperation(acute_angle, edge_map, unique_lines):
-    '''
-    Checks seperation between edges to find whether acute or obtuse seperation.
-    Finds direction vector of each edge using the intersecting point and computes the dot product to find the angle between the edges.
-    
-    Parameters
-    ----------
-    acute_angle : float
-        acute angle between lines found from the hough transform
-    
-    edge_map : np.ndarray 
-        edge map of input gray scale image
-    
-    unique_lines : list
-        list containing gradient and y intercept parameter tuples for 2 distinct lines, [(m1,c1), (m2,c2)] .
-    
+config = cfgp.ConfigParser()
+config.read('./settings.INI')
+config = config['TASK1']
 
-    Returns
-    -------
-    acute_bool : bool
-        Boolean value determined by whether or not seperation found to be acute
-    '''
+'''
+Checks seperation between edges to find whether acute or obtuse seperation.
+Finds direction vector of each edge using the intersecting point and computes the dot product to find the angle between the edges.
+
+Parameters
+----------
+acute_angle : float
+    acute angle between lines found from the hough transform
+
+edge_map : np.ndarray 
+    edge map of input gray scale image
+
+unique_lines : list
+    list containing gradient and y intercept parameter tuples for 2 distinct lines, [(m1,c1), (m2,c2)] .
+
+
+Returns
+-------
+acute_bool : bool
+    Boolean value determined by whether or not seperation found to be acute
+'''
+def check_acute_seperation(acute_angle, edge_map, unique_lines):
     # get index position array of edge pixels 
     pos_array = np.argwhere(edge_map)
 
@@ -117,26 +100,22 @@ def check_acute_seperation(acute_angle, edge_map, unique_lines):
     # print('angle from arcos:',angle*180/np.pi)
     acute_bool = angle <= np.pi/2
     return acute_bool
-    
-    
 
+'''
+Reads a png with opencv, runs canny edge detection and applies a hough transform to extract lines
+Checks if acute or obtuse seperation and returns the appropriate angle.
 
+Parameters
+----------
+png_path : str
+    path to png image containing lines
+
+Returns
+-------
+angle : float
+    angle between lines in degrees
+'''
 def find_angle(png_path):
-    '''
-    Reads a png with opencv, runs canny edge detection and applies a hough transform to extract lines
-    Checks if acute or obtuse seperation and returns the appropriate angle.
-    
-    Parameters
-    ----------
-    png_path : str
-        path to png image containing lines
-    
-    Returns
-    -------
-    angle : float
-        angle between lines in degrees
-    '''
-    
     # read image
     img = cv2.imread(png_path)
     # convert to gray scale
@@ -159,17 +138,17 @@ def find_angle(png_path):
     bbox_diag = ((i_max-i_min)**2 + (j_max-j_min)**2)**0.5
 
     # Loop over different thresholds and stop when 2 distinct lines found
-    for X in np.linspace(1,3,10):
-        thresh = int(round(bbox_diag/X))
+    for val in np.linspace(1,3,10):
+        thresh = int(round(bbox_diag/val))
         
         # apply a hough line transform
-        lines = cv2.HoughLines(edges,1,np.pi/180,thresh)
+        lines = cv2.HoughLines(edges, 1, np.pi/180, thresh)
 
-        if lines is None or len(lines)<2:
+        if (lines is None) or (len(lines) < 2):
             continue
 
         lines = lines.squeeze()
-        # remove parallel lines - rewrite in fewer lines
+        # remove parallel lines - rewrite in fewer lines?
         theta_list = []
         unique_lines = []
         for line in lines:
@@ -182,12 +161,9 @@ def find_angle(png_path):
         if len(unique_lines) == 2: 
             break
     
-
+    if config['ShowHough']:
+        draw_houghlines(lines, img)
     
-    
-    
-    #print(unique_lines)
-    #exit(1)
     # check for vertical lines:
     if len(np.nonzero(unique_lines[:,1])[0]) < len(unique_lines):
         # rotate edges by 90 to turn vertical line to horizontal
@@ -209,7 +185,6 @@ def find_angle(png_path):
         rho,theta = line
         if vert_bool:theta -= np.pi/2
         print('line polar params (rho,theta):',rho,theta)
-        
 
         # calc line cartesian params
         cosx = np.cos(theta)
@@ -225,7 +200,7 @@ def find_angle(png_path):
         # append param tuple to list
         unique_cartesian_lines.append((m,c))
 
-        
+
     ''' at this step len angles should = 2, if more than 2 angles at this stage need another filtering step'''
     if len(unique_lines) == 2:
         # calculate angle of incidences to find angle between lines
@@ -258,6 +233,25 @@ def find_angle(png_path):
         print('[ERROR] More than 2 lines found')
         return sys.exit(1)
 
+def draw_houghlines(lines, img):
+    for line in lines:
+        rho, theta = line
+
+        a = np.cos(theta)
+        b = np.sin(theta)
+
+        x0 = a*rho
+        y0 = b*rho
+        x1 = int(x0 + 1000*(-b))
+        y1 = int(y0 + 1000*(a))
+        x2 = int(x0 - 1000*(-b))
+        y2 = int(y0 - 1000*(a))
+
+        cv2.line(img, (x1,y1), (x2,y2), (0,0,255), 2)
+        
+        plt.imshow(img)
+        plt.show()
+        
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("png_path", help="Path to a png image containing lines")
