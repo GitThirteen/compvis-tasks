@@ -1,31 +1,18 @@
-import cv2
-import os
-import argparse
-import numpy as np
-import matplotlib.pyplot as plt
-# import matplotlib.patches as patches
-import sys
-import configparser as cfgp
-
-'''
-1: Passed
-2: Passed
-3: Passed
-4: Passed
-5: Passed
-6: Passed 
-7: Passed
-8: Acute returned instead of obtuse
-9: Passed
-10: Passed 
-'''
-
 '''
 TODO: 
 Check acute seperation function behaviour for case 8
 
 EXTRA: Implement auto canny / edge averaging to remove double edges (potentially making code more robust?) 
 '''
+
+import cv2
+# import os
+import argparse
+import numpy as np
+import matplotlib.pyplot as plt
+# import matplotlib.patches as patches
+import sys
+import configparser as cfgp
 
 config = cfgp.ConfigParser()
 config.read('./settings.INI')
@@ -64,8 +51,10 @@ def check_acute_seperation(acute_angle, edge_map, unique_lines):
     y_int = m1*x_int + c1
     intersection_point = np.asarray([y_int,x_int]) # y=i, x=j, flipped for array indexing
     
-    # find distance of edge pixels from intersection point 
-    print('intersection point:',intersection_point)
+    # find distance of edge pixels from intersection point
+    if config.getboolean('ShowDebug'):
+        print('intersection point:',intersection_point)
+
     pos_frm_int_array = pos_array - intersection_point # find difference in i,j indices
     dist_frm_int_array = np.sum(pos_frm_int_array**2,1)**0.5 # find abs difference 
     
@@ -84,8 +73,9 @@ def check_acute_seperation(acute_angle, edge_map, unique_lines):
     threshold_dist_frm_int_array = np.sum(threshold_pos_frm_int_array**2,1)**0.5 
     edge_point_2_idx = np.argmax(threshold_dist_frm_int_array)
 
-    print(f'edge point 1:{pos_array[edge_point_1_idx]}')
-    print(f'edge point 2:{pos_array[edge_point_2_idx]}')
+    if config.getboolean('ShowDebug'):
+        print(f'edge point 1:{pos_array[edge_point_1_idx]}')
+        print(f'edge point 2:{pos_array[edge_point_2_idx]}')
     
     # find unit vectors corresponding to direction of edge points
     edge_vec_1 = pos_frm_int_array[edge_point_1_idx]
@@ -93,11 +83,15 @@ def check_acute_seperation(acute_angle, edge_map, unique_lines):
 
     edge_unit_vec_1 = edge_vec_1 / np.linalg.norm(edge_vec_1)
     edge_unit_vec_2 = edge_vec_2 / np.linalg.norm(edge_vec_2)
-    
-    print(f'edge unit vec 1: {edge_unit_vec_1}, edge unit vec 2: {edge_unit_vec_2}')
+
+    if config.getboolean('ShowDebug'):
+        print(f'edge unit vec 1: {edge_unit_vec_1}, edge unit vec 2: {edge_unit_vec_2}')
+
     angle = np.arccos(np.clip(np.dot(edge_unit_vec_1, edge_unit_vec_2), -1.0, 1.0))
-    
-    # print('angle from arcos:',angle*180/np.pi)
+
+    if config.getboolean('ShowDebug'):
+        print('angle from arcos:', angle * 180/np.pi)
+
     acute_bool = angle <= np.pi/2
     return acute_bool
 
@@ -121,7 +115,7 @@ def find_angle(png_path):
     # convert to gray scale
     gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     # find edges
-    edges = cv2.Canny(gray_img,0,10,L2gradient=True) # experiment with params / auto canny https://pyimagesearch.com/2015/04/06/zero-parameter-automatic-canny-edge-detection-with-python-and-opencv/
+    edges = cv2.Canny(gray_img, 0, 10, L2gradient=True) # experiment with params / auto canny https://pyimagesearch.com/2015/04/06/zero-parameter-automatic-canny-edge-detection-with-python-and-opencv/
     
     '''
     check if way to remove double edges / do we even need to?
@@ -161,13 +155,15 @@ def find_angle(png_path):
         if len(unique_lines) == 2: 
             break
     
-    if config['ShowHough']:
+    if config.getboolean('ShowHough'):
         draw_houghlines(lines, img)
     
     # check for vertical lines:
     if len(np.nonzero(unique_lines[:,1])[0]) < len(unique_lines):
         # rotate edges by 90 to turn vertical line to horizontal
-        print('Vertical lines in image, rotating to avoid inf gradients')
+        if config.getboolean('ShowDebug'):
+            print('Vertical lines in image, rotating to avoid inf gradients')
+
         h,w = edges.shape
         offset = w
         edges = np.rot90(edges)
@@ -184,7 +180,8 @@ def find_angle(png_path):
         # extract rho theta values for each line
         rho,theta = line
         if vert_bool:theta -= np.pi/2
-        print('line polar params (rho,theta):',rho,theta)
+        if config.getboolean('ShowDebug'):
+            print('line polar params (rho,theta):',rho,theta)
 
         # calc line cartesian params
         cosx = np.cos(theta)
@@ -194,8 +191,9 @@ def find_angle(png_path):
         y0 = sinx*rho
         c = y0 - m*x0
 
-        if vert_bool: c+=offset       
-        print('line cartesian params (m,c):',m,c)
+        if vert_bool: c+=offset
+        if config.getboolean('ShowDebug'):      
+            print('line cartesian params (m,c):',m,c)
 
         # append param tuple to list
         unique_cartesian_lines.append((m,c))
@@ -208,11 +206,13 @@ def find_angle(png_path):
         m2,c2 = unique_cartesian_lines[1]
 
         # show lines and edges
-        x=np.arange(0,edges.shape[1],1)
-        plt.imshow(edges)
-        plt.scatter(x,m1*x+c1,s=0.5)
-        plt.scatter(x,m2*x+c2,s=0.5)
-        plt.show()
+        if config.getboolean('ShowDebug'):
+            x=np.arange(0,edges.shape[1],1)
+            plt.imshow(edges)
+            plt.scatter(x,m1*x+c1,s=0.5)
+            plt.scatter(x,m2*x+c2,s=0.5)
+            plt.show()
+        
         angle_1 = np.arctan(m1)
         angle_2 = np.arctan(m2)
         
@@ -240,12 +240,12 @@ def draw_houghlines(lines, img):
         a = np.cos(theta)
         b = np.sin(theta)
 
-        x0 = a*rho
-        y0 = b*rho
-        x1 = int(x0 + 1000*(-b))
-        y1 = int(y0 + 1000*(a))
-        x2 = int(x0 - 1000*(-b))
-        y2 = int(y0 - 1000*(a))
+        x0 = a * rho
+        y0 = b * rho
+        x1 = int(x0 + 1000 * (-b))
+        y1 = int(y0 + 1000 * (a))
+        x2 = int(x0 - 1000 * (-b))
+        y2 = int(y0 - 1000 * (a))
 
         cv2.line(img, (x1,y1), (x2,y2), (0,0,255), 2)
         
@@ -258,7 +258,8 @@ def main():
     args = parser.parse_args()
 
     theta = find_angle(args.png_path)
-    print(f'angle found:{theta:.3f}')
+    if config.getboolean('ShowDebug'):
+        print(f'angle found:{theta:.3f}')
 
 if __name__ == "__main__":
     main()
