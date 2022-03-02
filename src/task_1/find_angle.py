@@ -18,28 +18,29 @@ config = cfgp.ConfigParser()
 config.read('./settings.INI')
 config = config['TASK1']
 
-'''
-Checks seperation between edges to find whether acute or obtuse seperation.
-Finds direction vector of each edge using the intersecting point and computes the dot product to find the angle between the edges.
-
-Parameters
-----------
-acute_angle : float
-    acute angle between lines found from the hough transform
-
-edge_map : np.ndarray 
-    edge map of input gray scale image
-
-unique_lines : list
-    list containing gradient and y intercept parameter tuples for 2 distinct lines, [(m1,c1), (m2,c2)] .
-
-
-Returns
--------
-acute_bool : bool
-    Boolean value determined by whether or not seperation found to be acute
-'''
 def check_acute_seperation(acute_angle, edge_map, unique_lines):
+    '''
+    Checks seperation between edges to find whether acute or obtuse seperation.
+    Finds direction vector of each edge using the intersecting point and computes the dot product to find the angle between the edges.
+
+    Parameters
+    ----------
+    acute_angle : float
+        acute angle between lines found from the hough transform
+
+    edge_map : np.ndarray 
+        edge map of input gray scale image
+
+    unique_lines : list
+        list containing gradient and y intercept parameter tuples for 2 distinct lines, [(m1,c1), (m2,c2)] .
+
+
+    Returns
+    -------
+    acute_bool : bool
+        Boolean value determined by whether or not seperation found to be acute
+    '''
+
     # get index position array of edge pixels 
     pos_array = np.argwhere(edge_map)
 
@@ -95,21 +96,22 @@ def check_acute_seperation(acute_angle, edge_map, unique_lines):
     acute_bool = angle <= np.pi/2
     return acute_bool
 
-'''
-Reads a png with opencv, runs canny edge detection and applies a hough transform to extract lines
-Checks if acute or obtuse seperation and returns the appropriate angle.
-
-Parameters
-----------
-png_path : str
-    path to png image containing lines
-
-Returns
--------
-angle : float
-    angle between lines in degrees
-'''
 def find_angle(png_path):
+    '''
+    Reads a png with opencv, runs canny edge detection and applies a hough transform to extract lines
+    Checks if acute or obtuse seperation and returns the appropriate angle.
+
+    Parameters
+    ----------
+    png_path : str
+        path to png image containing lines
+
+    Returns
+    -------
+    angle : float
+        angle between lines in degrees
+    '''
+
     # read image
     img = cv2.imread(png_path)
     # convert to gray scale
