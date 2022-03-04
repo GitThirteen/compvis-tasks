@@ -62,25 +62,27 @@ def check_acute_seperation(acute_angle, edge_map, unique_lines):
     # select furthest pixel to represent edge 1
     edge_point_1_idx = np.argmax(dist_frm_int_array) # picks an edge end point as first edge
     edge_point_1 = pos_array[edge_point_1_idx]
-    thresh = dist_frm_int_array[edge_point_1_idx]/2
+    thresh = dist_frm_int_array[edge_point_1_idx]/10
 
     # calculate distance of edge pixels from edge_point_1
     pos_frm_edge_1_array = pos_array - edge_point_1 # find difference in i,j indices
-    dist_frm_edge_1_array = np.sum(pos_frm_edge_1_array**2,1)**0.5 # find abs difference 
+    dist_frm_edge_1_array = (np.sum(pos_frm_edge_1_array**2,1)**0.5) # find abs difference 
     
     # select pixel furthest away from intersect and also thresh distance away from edge_1
-    threshold_pos_array = np.argwhere(np.where(dist_frm_edge_1_array>thresh,1,0))
+    threshold_array = np.argwhere(np.where(dist_frm_edge_1_array>thresh,1,0))
+    threshold_pos_array = pos_array[threshold_array.flatten()]
+
     threshold_pos_frm_int_array = threshold_pos_array - intersection_point 
     threshold_dist_frm_int_array = np.sum(threshold_pos_frm_int_array**2,1)**0.5 
     edge_point_2_idx = np.argmax(threshold_dist_frm_int_array)
 
     if config.getboolean('ShowDebug'):
-        print(f'edge point 1:{pos_array[edge_point_1_idx]}')
-        print(f'edge point 2:{pos_array[edge_point_2_idx]}')
+        print(f'edge point 1:{pos_array[edge_point_1_idx]}\n')
+        print(f'edge point 2:{pos_array[edge_point_2_idx]}\n')
     
     # find unit vectors corresponding to direction of edge points
     edge_vec_1 = pos_frm_int_array[edge_point_1_idx]
-    edge_vec_2 = pos_frm_int_array[edge_point_2_idx]
+    edge_vec_2 = threshold_pos_frm_int_array[edge_point_2_idx]
 
     edge_unit_vec_1 = edge_vec_1 / np.linalg.norm(edge_vec_1)
     edge_unit_vec_2 = edge_vec_2 / np.linalg.norm(edge_vec_2)
@@ -96,9 +98,6 @@ def check_acute_seperation(acute_angle, edge_map, unique_lines):
         print(np.pi / 2)
         print('angle from arcos:', angle * 180/np.pi)
 
-    # TODO: Fix acute_bool
-    # EDGE POINTS WRONG!!
-    # calculation fails sometimes (check debug values)
     acute_bool = angle <= np.pi/2
     return acute_bool
 
