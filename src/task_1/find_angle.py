@@ -52,10 +52,10 @@ def check_acute_seperation(acute_angle, edge_map, unique_lines):
     y_int = m1*x_int + c1
     intersection_point = np.asarray([y_int,x_int]) # y=i, x=j, flipped for array indexing
     
-    # find distance of edge pixels from intersection point
     if config.getboolean('ShowDebug'):
         print('intersection point:',intersection_point)
 
+    # find distance of edge pixels from intersection point
     pos_frm_int_array = pos_array - intersection_point # find difference in i,j indices
     dist_frm_int_array = np.sum(pos_frm_int_array**2,1)**0.5 # find abs difference 
     
@@ -88,11 +88,17 @@ def check_acute_seperation(acute_angle, edge_map, unique_lines):
     if config.getboolean('ShowDebug'):
         print(f'edge unit vec 1: {edge_unit_vec_1}, edge unit vec 2: {edge_unit_vec_2}')
 
+    # TODO: Clipping doesn't change result atm, not sure if it's needed after we fix edge points?
     angle = np.arccos(np.clip(np.dot(edge_unit_vec_1, edge_unit_vec_2), -1.0, 1.0))
 
     if config.getboolean('ShowDebug'):
+        print(angle)
+        print(np.pi / 2)
         print('angle from arcos:', angle * 180/np.pi)
 
+    # TODO: Fix acute_bool
+    # EDGE POINTS WRONG!!
+    # calculation fails sometimes (check debug values)
     acute_bool = angle <= np.pi/2
     return acute_bool
 
