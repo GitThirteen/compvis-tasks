@@ -1,23 +1,17 @@
-'''
-TODO:
-Check acute seperation function behaviour for case 8
-
-EXTRA: Implement auto canny / edge averaging to remove double edges (potentially making code more robust?)
-'''
-
 import cv2
-# import os
+import os
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
-# import matplotlib.patches as patches
 import sys
 import configparser as cfgp
 
 config = cfgp.ConfigParser()
-config.read('./settings.INI')
+config.read(os.path.join(os.path.dirname(__file__), '../settings.INI'))
 config = config['TASK1']
 
+# TODO: We no longer use acute_angle, do we want to keep it for debug purposes,
+# or can we get rid of it?
 def check_acute_seperation(acute_angle, edge_map, unique_lines):
     '''
     Checks seperation between edges to find whether acute or obtuse seperation.
@@ -123,10 +117,6 @@ def find_angle(png_path):
     gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     # find edges
     edges = auto_canny(gray_img, 0.33)
-
-    '''
-    check if way to remove double edges / do we even need to?
-    '''
 
     '''
     Figure out way to select best threshold value / resolution based on thickness of lines / edges

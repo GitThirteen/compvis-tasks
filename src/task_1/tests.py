@@ -1,6 +1,7 @@
+import os
 from find_angle import find_angle
 
-IMAGE_PATH = 'test_images'
+IMAGE_PATH = os.path.join(os.path.dirname(__file__), 'test_images')
 
 passes = 0
 fails = 0
@@ -12,14 +13,14 @@ with open(IMAGE_PATH + '/list.txt') as f:
         frags = line.split(',')
         images[frags[0]] = frags[1]
 
-for image, angle in images.items():
-    path = IMAGE_PATH + '/' + image
+for name, angle in images.items():
+    path = IMAGE_PATH + '/' + name
     theta = find_angle(path)
 
     angle = round(float(angle))
     theta = round(float(theta))
 
-    print(image)
+    print(name)
     print(f'Expected angle: {angle}°')
     print(f'Found angle: {theta}°')
     if angle == theta:
