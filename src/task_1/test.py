@@ -1,7 +1,7 @@
 import os
 from find_angle import find_angle
 
-IMAGE_PATH = os.path.join(os.path.dirname(__file__), 'test_images')
+IMAGE_PATH = os.path.join(os.path.dirname(__file__), '../data/test_images')
 
 passes = 0
 fails = 0
