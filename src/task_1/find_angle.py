@@ -1,9 +1,9 @@
 import cv2
 import os
 import argparse
+import sys
 import numpy as np
 import matplotlib.pyplot as plt
-import sys
 import configparser as cfgp
 
 config = cfgp.ConfigParser()
@@ -26,8 +26,7 @@ def check_acute_seperation(acute_angle, edge_map, unique_lines):
         edge map of input gray scale image
 
     unique_lines : list
-        list containing gradient and y intercept parameter tuples for 2 distinct lines, [(m1,c1), (m2,c2)] .
-
+        list containing gradient and y intercept parameter tuples for 2 distinct lines, [(m1,c1), (m2,c2)]
 
     Returns
     -------
