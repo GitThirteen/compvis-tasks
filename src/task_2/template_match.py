@@ -47,15 +47,25 @@ def create_gaussian_pyramid(image, rotations, scale_levels): # todo: more params
         for lvl in range(scale_levels):
             key = key_base + str(lvl + 1)
 
-            blurred = cv2.GaussianBlur(img, (k, k), sigma)
-            downsampled = cv2.resize(blurred, (0, 0), fx=0.5, fy=0.5)
-            img = downsampled
+            img = cv2.GaussianBlur(img, (k, k), sigma)
+            img = np.delete(img, range(1, img.shape[0], 2), axis=0)
+            img = np.delete(img, range(1, img.shape[1], 2), axis=1)
+            print(img.shape)
             pyramid[key] = img
 
-            if config.getboolean('ShowPyramid') == True:
-                plt.imshow(img)
-                plt.title(str(img.shape))
-                plt.show()
+    if config.getboolean('ShowPyramid') == True:
+        _, axarr = plt.subplots(rotations, scale_levels)
+        plt.subplots_adjust(wspace=0)
+
+        for rot in range(rotations):
+            for lvl in range(scale_levels):
+                key = '' + str(rot) + '_' + str(lvl)
+                pos = axarr[rot, lvl]
+                pos.imshow(pyramid[key])
+                pos.set_xticks([])
+                pos.set_yticks([])
+        
+        plt.show()
 
     return pyramid
 
@@ -157,6 +167,7 @@ def main():
 
     for image in images:
         pyramid = create_gaussian_pyramid(image, rots, scale)
+        break
         pyramids.append(pyramid)
 
     # TODO Stuff with pyramids
