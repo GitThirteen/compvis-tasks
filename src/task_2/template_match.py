@@ -26,7 +26,7 @@ def create_gaussian_pyramid(image, rotations, scale_levels): # todo: more params
     pyramid : dictionary
         a dictionary containing the pyramid for the passed in image. The key is in the form <rotation>_<level>
     '''
-    
+
     pyramid = { }
 
     (h, w) = image.shape[:2]
@@ -39,19 +39,29 @@ def create_gaussian_pyramid(image, rotations, scale_levels): # todo: more params
         rot_m = cv2.getRotationMatrix2D((h // 2, w // 2), (360 / rotations) * rot, 1.0)
         img = cv2.warpAffine(image, rot_m, (w, h))
         pyramid[key_base + str(0)] = img
-        
+
         for lvl in range(scale_levels):
             key = key_base + str(lvl + 1)
 
-            blurred = cv2.GaussianBlur(img, (k, k), sigma)
-            downsampled = cv2.resize(blurred, (0, 0), fx=0.5, fy=0.5)
-            img = downsampled
+            img = cv2.GaussianBlur(img, (k, k), sigma)
+            img = np.delete(img, range(1, img.shape[0], 2), axis=0)
+            img = np.delete(img, range(1, img.shape[1], 2), axis=1)
+            print(img.shape)
             pyramid[key] = img
 
-            if config.getboolean('ShowPyramid') == True:
-                plt.imshow(img)
-                plt.title(str(img.shape))
-                plt.show()
+    if config.getboolean('ShowPyramid') == True:
+        _, axarr = plt.subplots(rotations, scale_levels)
+        plt.subplots_adjust(wspace=0)
+
+        for rot in range(rotations):
+            for lvl in range(scale_levels):
+                key = '' + str(rot) + '_' + str(lvl)
+                pos = axarr[rot, lvl]
+                pos.imshow(pyramid[key])
+                pos.set_xticks([])
+                pos.set_yticks([])
+
+        plt.show()
 
     return pyramid
 
@@ -154,8 +164,8 @@ def template_match(img, template_list):
         median_top_left = np.median(top_left_corners,0)
         median_bottom_right = np.median(bottom_right_corners,0)
         
+        median_top_left = [None,None] if (median_bottom_right == 0).all() else median_bottom_right
         median_bottom_right = [None,None] if (median_bottom_right == 0).all() else median_bottom_right
-        median_top_right = [None,None] if (median_bottom_right == 0).all() else median_bottom_right
 
         bboxs_list.append([median_top_left,median_bottom_right])
 
@@ -165,7 +175,6 @@ def template_match(img, template_list):
 
         
 
-    return 0
 
 
 def draw(): # todo: more params
@@ -196,7 +205,7 @@ def get_images(folder_path):
         _, file_type = os.path.splitext(file_name)
         if file_type.lower() not in valid_types:
             continue
-        
+
         image = cv2.imread(folder_path + '/' + file_name)
         collector.append(image)
 
@@ -212,6 +221,7 @@ def main():
 
     for image in images:
         pyramid = create_gaussian_pyramid(image, rots, scale)
+        break
         pyramids.append(pyramid)
 
     # TODO Stuff with pyramids
