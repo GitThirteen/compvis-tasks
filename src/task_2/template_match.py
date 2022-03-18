@@ -1,3 +1,4 @@
+from json.encoder import py_encode_basestring
 import cv2
 import os
 import numpy as np
@@ -40,30 +41,28 @@ def create_gaussian_pyramid(image, rotations, scale_levels):
 
     # loop for every rotation
     for rot in range(rotations):
-        # define key structure and rotation step size
-        key_base = '' + str(rot) + '_'
+        # rotation step size
         step = 360 / rotations
 
         # create a rot matrix and rotate image
         rot_m = cv2.getRotationMatrix2D((h // 2, w // 2), step * rot, 1.0)
         img = cv2.warpAffine(image, rot_m, (w, h))
         # add first "default" image as pyramid base
-        pyramid[key_base + str(0)] = img
+        pyramid[rot] = [ img ]
 
         # loop for the rest of the pyramid
-        for lvl in range(1, scale_levels):
-            key = key_base + str(lvl)
-
+        for level in range(1, scale_levels):
             # blur image with gaussian and remove all even rows
             # and cols (subsampling)
             img = cv2.GaussianBlur(img, (k, k), sigma)
             img = np.delete(img, range(1, img.shape[0], 2), axis=0)
             img = np.delete(img, range(1, img.shape[1], 2), axis=1)
             # add new image to pyramid
-            pyramid[key] = img
+            pyramid[rot].append(img)
 
     if config.getboolean('ShowPyramid') == True:
         draw_gaussian_pyramid(pyramid, scale_levels, rotations)
+
 
     return pyramid
 
