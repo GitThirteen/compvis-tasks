@@ -1,4 +1,3 @@
-from json.encoder import py_encode_basestring
 import cv2
 import os
 import numpy as np
