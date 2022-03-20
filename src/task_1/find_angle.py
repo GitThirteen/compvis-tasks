@@ -10,6 +10,7 @@ config = cfgp.ConfigParser()
 config.read(os.path.join(os.path.dirname(__file__), '../settings.INI'))
 config = config['TASK1']
 
+
 # TODO: We no longer use acute_angle, do we want to keep it for debug purposes,
 # or can we get rid of it?
 def check_acute_seperation(acute_angle, edge_map, unique_lines):
@@ -38,35 +39,35 @@ def check_acute_seperation(acute_angle, edge_map, unique_lines):
     pos_array = np.argwhere(edge_map)
 
     # calculate intersection point
-    m1,c1 = unique_lines[0]
-    m2,c2 = unique_lines[1]
+    m1, c1 = unique_lines[0]
+    m2, c2 = unique_lines[1]
 
-    x_int = (c2 - c1)/(m1 - m2)
-    y_int = m1*x_int + c1
-    intersection_point = np.asarray([y_int,x_int]) # y=i, x=j, flipped for array indexing
+    x_int = (c2 - c1) / (m1 - m2)
+    y_int = m1 * x_int + c1
+    intersection_point = np.asarray([y_int, x_int])  # y=i, x=j, flipped for array indexing
 
     if config.getboolean('ShowDebug'):
-        print('intersection point:',intersection_point)
+        print('intersection point:', intersection_point)
 
     # find distance of edge pixels from intersection point
-    pos_frm_int_array = pos_array - intersection_point # find difference in i,j indices
-    dist_frm_int_array = np.sum(pos_frm_int_array**2,1)**0.5 # find abs difference
+    pos_frm_int_array = pos_array - intersection_point  # find difference in i,j indices
+    dist_frm_int_array = np.sum(pos_frm_int_array ** 2, 1) ** 0.5  # find abs difference
 
     # select furthest pixel to represent edge 1
-    edge_point_1_idx = np.argmax(dist_frm_int_array) # picks an edge end point as first edge
+    edge_point_1_idx = np.argmax(dist_frm_int_array)  # picks an edge end point as first edge
     edge_point_1 = pos_array[edge_point_1_idx]
-    thresh = dist_frm_int_array[edge_point_1_idx]/10
+    thresh = dist_frm_int_array[edge_point_1_idx] / 10
 
     # calculate distance of edge pixels from edge_point_1
-    pos_frm_edge_1_array = pos_array - edge_point_1 # find difference in i,j indices
-    dist_frm_edge_1_array = (np.sum(pos_frm_edge_1_array**2,1)**0.5) # find abs difference
+    pos_frm_edge_1_array = pos_array - edge_point_1  # find difference in i,j indices
+    dist_frm_edge_1_array = (np.sum(pos_frm_edge_1_array ** 2, 1) ** 0.5)  # find abs difference
 
     # select pixel furthest away from intersect and also thresh distance away from edge_1
-    threshold_array = np.argwhere(np.where(dist_frm_edge_1_array>thresh,1,0))
+    threshold_array = np.argwhere(np.where(dist_frm_edge_1_array > thresh, 1, 0))
     threshold_pos_array = pos_array[threshold_array.flatten()]
 
     threshold_pos_frm_int_array = threshold_pos_array - intersection_point
-    threshold_dist_frm_int_array = np.sum(threshold_pos_frm_int_array**2,1)**0.5
+    threshold_dist_frm_int_array = np.sum(threshold_pos_frm_int_array ** 2, 1) ** 0.5
     edge_point_2_idx = np.argmax(threshold_dist_frm_int_array)
 
     if config.getboolean('ShowDebug'):
@@ -89,10 +90,11 @@ def check_acute_seperation(acute_angle, edge_map, unique_lines):
     if config.getboolean('ShowDebug'):
         print(angle)
         print(np.pi / 2)
-        print('angle from arcos:', angle * 180/np.pi)
+        print('angle from arcos:', angle * 180 / np.pi)
 
-    acute_bool = angle <= np.pi/2
+    acute_bool = angle <= np.pi / 2
     return acute_bool
+
 
 def find_angle(png_path):
     '''
@@ -123,16 +125,16 @@ def find_angle(png_path):
     '''
     # find edge bbox
     pos_array = np.argwhere(edges)
-    i_max, i_min = np.amax(pos_array[:,0]), np.amin(pos_array[:,0])
-    j_max, j_min = np.amax(pos_array[:,1]), np.amin(pos_array[:,1])
-    bbox_diag = ((i_max-i_min)**2 + (j_max-j_min)**2)**0.5
+    i_max, i_min = np.amax(pos_array[:, 0]), np.amin(pos_array[:, 0])
+    j_max, j_min = np.amax(pos_array[:, 1]), np.amin(pos_array[:, 1])
+    bbox_diag = ((i_max - i_min) ** 2 + (j_max - j_min) ** 2) ** 0.5
 
     # Loop over different thresholds and stop when 2 distinct lines found
-    for val in np.linspace(1,3,10):
-        thresh = int(round(bbox_diag/val))
+    for val in np.linspace(1, 3, 10):
+        thresh = int(round(bbox_diag / val))
 
         # apply a hough line transform
-        lines = cv2.HoughLines(edges, 1, np.pi/180, thresh)
+        lines = cv2.HoughLines(edges, 1, np.pi / 180, thresh)
 
         if (lines is None) or (len(lines) < 2):
             continue
@@ -155,18 +157,17 @@ def find_angle(png_path):
         draw_houghlines(lines, img)
 
     # check for vertical lines:
-    if len(np.nonzero(unique_lines[:,1])[0]) < len(unique_lines):
+    if len(np.nonzero(unique_lines[:, 1])[0]) < len(unique_lines):
         # rotate edges by 90 to turn vertical line to horizontal
         if config.getboolean('ShowDebug'):
             print('Vertical lines in image, rotating to avoid inf gradients')
 
-        h,w = edges.shape
+        h, w = edges.shape
         offset = w
         edges = np.rot90(edges)
         vert_bool = True
     else:
         vert_bool = False
-
 
     # array to store line param tuples (m,c)
     unique_cartesian_lines = []
@@ -174,60 +175,60 @@ def find_angle(png_path):
     # loop over lines found via the hough line transform
     for line in unique_lines:
         # extract rho theta values for each line
-        rho,theta = line
-        if vert_bool:theta -= np.pi/2
+        rho, theta = line
+        if vert_bool: theta -= np.pi / 2
         if config.getboolean('ShowDebug'):
-            print('line polar params (rho,theta):',rho,theta)
+            print('line polar params (rho,theta):', rho, theta)
 
         # calc line cartesian params
         cosx = np.cos(theta)
-        sinx= np.sin(theta)
-        m = -1/np.tan(theta)
-        x0 = cosx*rho
-        y0 = sinx*rho
-        c = y0 - m*x0
+        sinx = np.sin(theta)
+        m = -1 / np.tan(theta)
+        x0 = cosx * rho
+        y0 = sinx * rho
+        c = y0 - m * x0
 
-        if vert_bool: c+=offset
+        if vert_bool: c += offset
         if config.getboolean('ShowDebug'):
-            print('line cartesian params (m,c):',m,c)
+            print('line cartesian params (m,c):', m, c)
 
         # append param tuple to list
-        unique_cartesian_lines.append((m,c))
-
+        unique_cartesian_lines.append((m, c))
 
     ''' at this step len angles should = 2, if more than 2 angles at this stage need another filtering step'''
     if len(unique_lines) == 2:
         # calculate angle of incidences to find angle between lines
-        m1,c1 = unique_cartesian_lines[0]
-        m2,c2 = unique_cartesian_lines[1]
+        m1, c1 = unique_cartesian_lines[0]
+        m2, c2 = unique_cartesian_lines[1]
 
         # show lines and edges
         if config.getboolean('ShowDebug'):
-            x=np.arange(0,edges.shape[1],1)
+            x = np.arange(0, edges.shape[1], 1)
             plt.imshow(edges)
-            plt.scatter(x,m1*x+c1,s=0.5)
-            plt.scatter(x,m2*x+c2,s=0.5)
+            plt.scatter(x, m1 * x + c1, s=0.5)
+            plt.scatter(x, m2 * x + c2, s=0.5)
             plt.show()
 
         angle_1 = np.arctan(m1)
         angle_2 = np.arctan(m2)
 
         # find absolute acute angle
-        angle = np.abs(angle_1-angle_2)
-        acute_angle = np.pi - angle if angle>np.pi/2 else angle
+        angle = np.abs(angle_1 - angle_2)
+        acute_angle = np.pi - angle if angle > np.pi / 2 else angle
 
         # check if acute seperation true
         acute_bool = check_acute_seperation(acute_angle, edges, unique_cartesian_lines)
 
         # return angle in degrees
         if acute_bool:
-            return 180/np.pi * acute_angle
+            return 180 / np.pi * acute_angle
         else:
-            return 180/np.pi * (np.pi - acute_angle)
+            return 180 / np.pi * (np.pi - acute_angle)
 
     else:
         print('[ERROR] More than 2 lines found')
         return sys.exit(1)
+
 
 def draw_houghlines(lines, img):
     for line in lines:
@@ -243,10 +244,11 @@ def draw_houghlines(lines, img):
         x2 = int(x0 - 1000 * (-b))
         y2 = int(y0 - 1000 * (a))
 
-        cv2.line(img, (x1,y1), (x2,y2), (0,0,255), 2)
+        cv2.line(img, (x1, y1), (x2, y2), (0, 0, 255), 2)
 
         plt.imshow(img)
         plt.show()
+
 
 def auto_canny(img, sigma):
     # Calculate median of pixel intensities
@@ -260,6 +262,7 @@ def auto_canny(img, sigma):
     edges = cv2.Canny(img, lower, upper, L2gradient=True)
     return edges
 
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("png_path", help="Path to a png image containing lines")
@@ -268,6 +271,7 @@ def main():
     theta = find_angle(args.png_path)
     if config.getboolean('ShowDebug'):
         print(f'angle found:{theta:.3f}')
+
 
 if __name__ == "__main__":
     main()
