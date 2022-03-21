@@ -25,7 +25,7 @@ def create_gaussian_pyramid(image, rotations, scale_levels):
     scale_levels : int
         the amount of subsampled images + the base image
 
-    Returns 
+    Returns
     -------
     pyramid : dictionary
         a dictionary containing the pyramid for the passed in image. The key is in the form <rotation>_<level>
@@ -104,34 +104,34 @@ def template_match(img, template_list):
 
     template_list: list
      list of templates to be matched in image: [ndarray_temp_1, ndarray_temp_2,...]. Each template should be a 3D numpy array with using the same axis ordering conventions as used by arrays returned from cv2.imread()
-    
+
     Returns
     -------
     bboxs_list: list
-     list containing bbox coordinate tuples for each template identifying location of template in image: [[(x0,y0),(x1,y1)],...] if no match for a template, None tuple pairs returned for coordinates of bbox of that tuple. 
+     list containing bbox coordinate tuples for each template identifying location of template in image: [[(x0,y0),(x1,y1)],...] if no match for a template, None tuple pairs returned for coordinates of bbox of that tuple.
     '''
     # TODO
     # test code
     # Figure out way to pick the 'best' result from all the methods results. Define best ? Median bbox values?
     # check how long for loop takes to loop over all templates, might wanna do a 3d convolution instead of several 2d convolves for performance
-    # - research what the difference between each method is 
+    # - research what the difference between each method is
     # figure out where the threshold is set for the response - will a 'match' always be found?
 
     # EDGE CASES:
     # no match found
     # multiple matches found
-    
+
     methods = ['cv2.TM_CCOEFF', 'cv2.TM_CCOEFF_NORMED', 'cv2.TM_CCORR',
             'cv2.TM_CCORR_NORMED', 'cv2.TM_SQDIFF', 'cv2.TM_SQDIFF_NORMED']
-    
+
     # init bbox array
     bboxs_list = []
-    
+
     # loop over templates
     for template in template_list:
         # extract template dims
         w, h = template.shape[::-1]
-        
+
         # initialise lists to track bbox generated from each method
         top_left_corners = np.zeros((len(methods),2))
         bottom_right_corners = np.zeros((len(methods),2))
@@ -140,15 +140,15 @@ def template_match(img, template_list):
         for idx,meth in enumerate(methods):
             img2 = img.copy()
             method = eval(meth)
-            
+
             # Apply template Matching
             res = cv2.matchTemplate(img2,template,method)
             '''
             EDGE CASE: multiple matches of template in image cv2.minMaxLoc will not be sufficient
             how to detect if multiple detections?
             '''
-            min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res) 
-            
+            min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
+
             # If the method is TM_SQDIFF or TM_SQDIFF_NORMED, take minimum
             if method in [cv2.TM_SQDIFF, cv2.TM_SQDIFF_NORMED]:
                 top_left = np.asarraymin_loc
@@ -169,7 +169,7 @@ def template_match(img, template_list):
         '''
         median_top_left = np.median(top_left_corners,0)
         median_bottom_right = np.median(bottom_right_corners,0)
-        
+
         median_top_left = [None,None] if (median_bottom_right == 0).all() else median_bottom_right
         median_bottom_right = [None,None] if (median_bottom_right == 0).all() else median_bottom_right
 
@@ -179,28 +179,31 @@ def template_match(img, template_list):
 
 
 
-def draw(): # todo: more params
+def draw(img, bboxes):
     '''
     Draws a bounding box around each detected object, including its class label.
 
     Parameters
     ----------
-    param_one : type
-        param_desc
+    img : np.ndarray
+        return value of cv2.imread(img_path), a 3d numpy array
 
-    pram_two : type
-        param_desc
-
-    param_three : type
-        param_desc
+    bboxes : dictionary
+        dictionary with the image label as the key and the bbox top left and bottom right stored as tuples in a list as the value.
+        e.g. {"hydrant": [top_left, bottom_right], ...}
 
     Returns
     -------
-    return_val : type
-        val_desc
+    final_image : np.ndarray
+        Final image with bboxes and labels represented as a 3d numpy array
     '''
-    # TODO
-    return
+    result = img.copy()
+    for label, bbox in bboxes:
+        cv2.rectangle(result, bbox[0], bbox[1], (0, 0, 255), 2)
+        cv2.putText(result, label, (bbox[0][0], bbox[1][1]+3), 0, 0.3, (0,255,0))
+
+    cv2.imshow("Bounded and labelled images", result)
+    return result
 
 
 def main():
