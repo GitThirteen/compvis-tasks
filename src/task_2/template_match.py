@@ -1,6 +1,7 @@
 import cv2
 import os
 import numpy as np
+import matplotlib.pyplot as plt
 import configparser as cfgp
 from helpers import draw_gaussian_pyramid, get_images
 
@@ -66,28 +67,35 @@ def create_gaussian_pyramid(image, rotations, scale_levels):
     return pyramid
 
 
-def preprocess(pyramids):
+def preprocess(pyramids, rotations, scale_levels):
     '''
     Sets the background to 0 (black) for each scaled and rotated template.
 
     Parameters
     ----------
-    param_one : type
-        param_desc
+    pyramids : list
+        A list of dictionaries representing the gaussian pyramids
 
-    pram_two : type
-        param_desc
+    rotations : int
+        the amount of rotations
 
-    param_three : type
-        param_desc
+    scale_levels : int
+        the amount of subsampled images + the base image
 
     Returns
     -------
-    return_val : type
-        val_desc
+    pyramids : list
+        Preprocessed list of dictionaries representing the gaussian pyramids
     '''
-    # TODO
-    return
+    for pyramid in pyramids:
+        for rot in range(rotations):
+            for level in range(0, scale_levels):
+                img = pyramid[rot][level].copy()
+                # Set background of img to black
+                ret, thresh = cv2.threshold(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY), 245, 255, cv2.THRESH_BINARY)
+                img[thresh == 255] = 0
+                pyramid[rot][level] = img
+    return pyramids
 
 
 def template_match(img, template_list):
