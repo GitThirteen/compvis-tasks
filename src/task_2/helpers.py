@@ -38,7 +38,7 @@ def draw_gaussian_pyramid(pyramid, levels, rotations):
     Parameters
     ----------
     pyramid : dictionary
-        contains all pyramids to be drawn with key <rotation>_<level>
+        contains all pyramids to be drawn
 
     levels : int
         amount of levels per pyramid
@@ -52,9 +52,9 @@ def draw_gaussian_pyramid(pyramid, levels, rotations):
     for rot in range(rotations):
         rot_drawn = False
         for lvl in range(levels - 1, -1, -1):
-            key = '' + str(rot) + '_' + str(lvl)
+            #key = '' + str(rot) + '_' + str(lvl)
             el = axarr[levels - lvl - 1, rot]
-            el.imshow(pyramid[key])
+            el.imshow(pyramid[rot][lvl])
             el.axis('off')
 
             if rot_drawn == False:
