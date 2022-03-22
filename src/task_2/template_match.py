@@ -208,9 +208,44 @@ def draw(img, bboxes):
         cv2.rectangle(result, bbox[0], bbox[1], (0, 0, 255), 2)
         cv2.putText(result, label, (bbox[0][0], bbox[1][1]+3), 0, 0.3, (0,255,0))
 
-    cv2.imshow("Bounded and labelled images", result)
+    plt.imshow("Bounded and labelled images", result)
+    plt.show()
     return result
 
+def get_bbox_dims(img):
+    '''
+    Finds dimensions for bounding boxes in template
+
+    Parameters
+    ----------
+    img : np.ndarray
+     return value of cv2.imread(img_path), a 3d numpy array
+
+    Returns
+    -------
+    dims_list: list
+     list containing width and height of each bbox in image as tuples [(width, height), ....]
+    '''
+    dims_list = []
+    new = img.copy()
+
+    # Blur the image
+    blur = cv2.GaussianBlur(new, (11, 11), 3)
+    # Convert the image to grayscale
+    grey = cv2.cvtColor(blur, cv2.COLOR_BGR2GRAY)
+
+    # Convert the grayscale image to binary
+    ret, binary = cv2.threshold(grey, 250, 255, cv2.THRESH_BINARY)
+    contours, hierarchy = cv2.findContours(~binary, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+    for contour in contours:
+        x, y, w, h = cv2.boundingRect(contour)
+        if (w*h) > 500:
+            dims = (w, h)
+            cv2.rectangle(new,(x,y), (x+w,y+h), (255,0,0), 5)
+            dims_list.append(dims)
+
+    return dims_list
 
 def main():
     images = get_images(config.get('TrainingDataPath'))
