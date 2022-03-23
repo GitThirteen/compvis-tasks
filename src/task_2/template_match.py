@@ -204,11 +204,11 @@ def draw(img, bboxes):
         Final image with bboxes and labels represented as a 3d numpy array
     '''
     result = img.copy()
-    for label, bbox in bboxes:
-        cv2.rectangle(result, bbox[0], bbox[1], (0, 0, 255), 2)
-        cv2.putText(result, label, (bbox[0][0], bbox[1][1]+3), 0, 0.3, (0,255,0))
+    for label, bbox in bboxes.items():
+        cv2.rectangle(result, bbox[0], bbox[1], (255, 0, 0), 2)
+        cv2.putText(result, label, (bbox[0][0], bbox[1][1]+13), 0, 0.5, (255,0,0))
 
-    plt.imshow("Bounded and labelled images", result)
+    plt.imshow(result)
     plt.show()
     return result
 
