@@ -1,5 +1,6 @@
 import cv2
 import os
+import sys
 import numpy as np
 import matplotlib.pyplot as plt
 import configparser as cfgp
@@ -33,7 +34,7 @@ def create_gaussian_pyramid(image, rotations, scale_levels):
     Returns
     -------
     pyramid : dict
-        a dictionary containing the pyramid for the passed in image. The key is the rotation of the image.
+        a dictionary containing the pyramid for the passed in image. The key is the rotation factor (e.g. 0, 1, 2, 3) of the image.
     """
 
     pyramid = { }
@@ -71,8 +72,6 @@ def create_gaussian_pyramid(image, rotations, scale_levels):
 
     if config.getboolean('ShowPyramid') == True:
         draw_gaussian_pyramid(pyramid, scale_levels, rotations)
-
-    print(pyramid)
 
     return pyramid
 
@@ -144,20 +143,73 @@ def get_bbox_dims(img):
     return dims_list
 
 
-def extract_template_from_pyramid(pyramid, scales, option="closest"):
+def extract_templates_from_pyramid(pyramid, scales, option='closest'):
+    """
+    TODO Description
+    Options: closest, upper, lower, both
     """
 
-    """
-
-    #print(pyramid)
-
-    #for scale in scales:
-        
+    final_diags = [ ]
     
+    first_el = list(pyramid.values())[0]
+    diags = [(len(a) * np.sqrt(2)) for a in first_el]
 
+    def closest():
+        closest = min(diags, key=lambda x: abs(x - diag))
+        if closest not in final_diags:
+            final_diags.append(closest)
 
-    return
+    def upper():
+        c_diags = diags.copy()
+        c_diags.reverse()
 
+        upper = c_diags[-1]
+        for d in c_diags:
+            if diag < d:
+                upper = d
+                break
+
+        if upper not in final_diags:
+            final_diags.append(upper)
+
+    def lower():
+        lower = diags[-1]
+        for d in diags:
+            if diag > d:
+                lower = d
+                break
+
+        if lower not in final_diags:
+            final_diags.append(lower)
+
+    def both():
+        upper()
+        lower()
+
+    funcs = {
+        'closest': closest,
+        'upper': upper,
+        'lower': lower,
+        'both': both
+    }
+
+    for scale in scales:
+        diag = np.sqrt(scale[0] ** 2 + scale[1] ** 2)
+
+        if option not in funcs:
+            # In case an invalid option was specified
+            print(f'[ERROR] Option {option} does not exist.')
+            sys.exit(1)
+
+        funcs[option]()
+    
+    result = []
+    indices = [diags.index(el) for el in final_diags]
+    for level_list in pyramid.values():
+        result.append((el for i, el in enumerate(level_list) if i in indices))
+
+    return result
+        
 
 def template_match(img, img_scale, template_dict):
     """
@@ -205,7 +257,7 @@ def template_match(img, img_scale, template_dict):
         w, h = template.shape[::-1]
         
         # extract template at correct scales
-        scaled_templates = extract_template_from_pyramid(template, scale_list, option="upper")
+        scaled_templates = extract_templates_from_pyramid(template, scale_list, option="upper")
         
         for temps in scaled_templates:
             # initialise lists to track bbox generated from each method
@@ -218,7 +270,7 @@ def template_match(img, img_scale, template_dict):
                             method = eval(meth)
                             
                             # Apply template Matching
-                            res = cv2.matchTemplate(img2,template,method)
+                            res = cv2.matchTemplate(img2, template, method)
                             '''
                             EDGE CASE: multiple matches of template in image cv2.minMaxLoc will not be sufficient
                             how to detect if multiple detections?
@@ -284,11 +336,9 @@ def draw(img, bboxes):
     return result
 
 
-
-
-
 def main():
     images = get_images(config.get('TrainingDataPath'))
+    test_images = get_images(config.get('TestImgDataPath'))
     rots = config.getint('PyramidRotations')
     scale = config.getint('ScaleLevels')
 
@@ -297,6 +347,17 @@ def main():
     for image in images:
         pyramid = create_gaussian_pyramid(image, rots, scale)
         pyramids.append(pyramid)
+
+    # TODO
+    # Iterate over all test_images to get the bbox (currently we're only doing the first one)
+    # Then use one of the settings (or all of them if you feel spicy)
+    # to extract the right pyramid level(s) and call the template_match function
+    bboxes = get_bbox_dims(test_images[0])
+
+    extract_templates_from_pyramid(pyramids[0], bboxes)
+    #extract_templates_from_pyramid(pyramids[0], bboxes, 'upper')
+    #extract_templates_from_pyramid(pyramids[0], bboxes, 'lower')
+    #extract_templates_from_pyramid(pyramids[0], bboxes, 'both')
 
     # TODO Stuff with pyramids
 
