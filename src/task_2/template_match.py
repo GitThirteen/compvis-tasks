@@ -2,6 +2,7 @@ import cv2
 import os
 import sys
 import argparse
+import re
 import numpy as np
 import matplotlib.pyplot as plt
 import configparser as cfgp
@@ -155,7 +156,7 @@ def extract_templates_from_pyramid(pyramid, bboxes, option='closest'):
         list of (w,h) tuples for the bboxes found of objects in the image
     
     option : str
-        closest : returns scales 
+        closest : returns scales
 
     Returns:
     --------
@@ -167,15 +168,15 @@ def extract_templates_from_pyramid(pyramid, bboxes, option='closest'):
     final_scale_diags = [ ]
     
     first_scale_list = list(pyramid.values())[0]
-    bbox_diags = [np.sum(scale_level.shape[:-1]**2)**0.5 for scale_level in first_scale_list]
+    scale_diags = [np.sqrt(scale_lvl.shape[0] ** 2 + scale_lvl.shape[1] ** 2) for scale_lvl in first_scale_list]
 
     def closest():
-        closest = min(bbox_diags, key=lambda x: abs(x - diag))
+        closest = min(scale_diags, key=lambda x: abs(x - diag))
         if closest not in final_scale_diags:
             final_scale_diags.append(closest)
 
     def upper():
-        c_bbox_diags = bbox_diags.copy()
+        c_bbox_diags = scale_diags.copy()
         c_bbox_diags.reverse()
 
         upper = c_bbox_diags[-1]
@@ -188,8 +189,8 @@ def extract_templates_from_pyramid(pyramid, bboxes, option='closest'):
             final_scale_diags.append(upper)
 
     def lower():
-        lower = bbox_diags[-1]
-        for d in bbox_diags:
+        lower = scale_diags[-1]
+        for d in scale_diags:
             if diag > d:
                 lower = d
                 break
@@ -210,7 +211,6 @@ def extract_templates_from_pyramid(pyramid, bboxes, option='closest'):
 
     for bbox in bboxes:
         diag = np.sqrt(bbox[0] ** 2 + bbox[1] ** 2)
-
         if option not in funcs:
             # In case an invalid option was specified
             print(f'[ERROR] Option {option} does not exist.')
@@ -218,16 +218,16 @@ def extract_templates_from_pyramid(pyramid, bboxes, option='closest'):
 
         funcs[option]()
     
-    filtered_pyramid = {}
+    filtered_pyramid = { }
+    indices = [scale_diags.index(el) for el in final_scale_diags]
 
-    indices = [bbox_diags.index(el) for el in final_scale_diags]
     for rot_key, level_list in pyramid.items():
         filtered_pyramid[rot_key] = [scaled_template for scale_level_index, scaled_template in enumerate(level_list) if scale_level_index in indices]
 
-    return result
+    return filtered_pyramid
         
 
-def template_match(img, img_scale, template_dict):
+def template_match(img, template_dict):
     """
     Convolves a set of templates across an image and returns a list containing the bbox of matches.
     code based off tutorial : https://docs.opencv.org/3.4/d4/dc6/tutorial_py_template_matching.html
@@ -272,41 +272,37 @@ def template_match(img, img_scale, template_dict):
         # extract template dims
         w, h = template.shape[::-1]
         
-        # extract template at correct scales
-        scaled_templates = extract_templates_from_pyramid(template, scale_list, option="upper")
-        
-        for temps in scaled_templates:
-            # initialise lists to track bbox generated from each method
-            top_left_corners = np.zeros((len(methods),2))
-            bottom_right_corners = np.zeros((len(methods),2))
+        # initialise lists to track bbox generated from each method
+        top_left_corners = np.zeros((len(methods),2))
+        bottom_right_corners = np.zeros((len(methods),2))
 
-            # loop over similarity scores
-            for idx,meth in enumerate(methods):
-                            img2 = img.copy()
-                            method = eval(meth)
-                            
-                            # Apply template Matching
-                            res = cv2.matchTemplate(img2, template, method)
-                            '''
-                            EDGE CASE: multiple matches of template in image cv2.minMaxLoc will not be sufficient
-                            how to detect if multiple detections?
-                            '''
-                            min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res) 
-                            
-                            # If the method is TM_SQDIFF or TM_SQDIFF_NORMED, take minimum
-                            if method in [cv2.TM_SQDIFF, cv2.TM_SQDIFF_NORMED]:
-                                            top_left = np.asarraymin_loc
-                            else:
-                                            top_left = np.asarray(max_loc)
-                            bottom_right = (top_left[0] + w, top_left[1] + h)
+        # loop over similarity scores
+        for idx, meth in enumerate(methods):
+            img2 = img.copy()
+            method = eval(meth)
+            
+            # Apply template Matching
+            res = cv2.matchTemplate(img2, template, method)
+            '''
+            EDGE CASE: multiple matches of template in image cv2.minMaxLoc will not be sufficient
+            how to detect if multiple detections?
+            '''
+            min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res) 
+            
+            # If the method is TM_SQDIFF or TM_SQDIFF_NORMED, take minimum
+            if method in [cv2.TM_SQDIFF, cv2.TM_SQDIFF_NORMED]:
+                            top_left = np.asarraymin_loc
+            else:
+                            top_left = np.asarray(max_loc)
+            bottom_right = (top_left[0] + w, top_left[1] + h)
 
-                            # add corners to arrays
-                            top_left_corners[idx] = top_left
-                            bottom_right_corners[idx] = bottom_right
+            # add corners to arrays
+            top_left_corners[idx] = top_left
+            bottom_right_corners[idx] = bottom_right
 
-                            # draw bbox on img for debugging
-                            if config.getboolean('ShowBbox') == True:
-                                            cv2.rectangle(img2,top_left, bottom_right, 255, 2)
+            # draw bbox on img for debugging
+            if config.getboolean('ShowBbox') == True:
+                cv2.rectangle(img2,top_left, bottom_right, 255, 2)
 
         # find median corners - Introduce debugging print statements here, median taking could give poor results
         '''
@@ -353,6 +349,7 @@ def draw(img, bboxes):
 
 
 def main():
+    # Parsing image file and declaring necessary params for pyramid generation
     parser = argparse.ArgumentParser()
     parser.add_argument("png_path", help="Path to a test image")
     args = parser.parse_args()
@@ -362,37 +359,46 @@ def main():
     rots = config.getint('PyramidRotations')
     scale = config.getint('ScaleLevels')
 
+    # Generates a pyramid for all templates
     pyramids = [ ]
 
     for template in templates:
         pyramid = create_gaussian_pyramid(template, rots, scale)
         pyramids.append(pyramid)
 
-    # TODO
-    # Iterate over all test_images to get the bbox (currently we're only doing the first one)
-    # Then use one of the settings (or all of them if you feel spicy)
-    # to extract the right pyramid level(s) and call the template_match function
-    bboxes = get_bbox_dims(test_image)
+    # Find bbox dims in training image
+    test_image_bboxes = get_bbox_dims(test_image)
 
-    templates = [ ]
+    # Extract image classes from file names
+    file_names = os.listdir(config.get('TrainingDataPath'))
+    class_names = [re.search('-(.*)\.', name).group(1) for name in file_names]
+    
+    templates = { }
+    i = 0
     for pyramid in pyramids:
-        for key, value in pyramid.items():
-            for scaled_img in value:
+        for _, scaled_img_list in pyramid.items():
+            for scaled_img in scaled_img_list:
                 _, thresh = cv2.threshold(cv2.cvtColor(scaled_img, cv2.COLOR_BGR2GRAY), 245, 255, cv2.THRESH_BINARY)
                 scaled_img[thresh == 255] = 0
-            templates.append(extract_templates_from_pyramid(pyramid, bboxes))
 
-    print(templates)
-    
-    for template in templates:
-        print(type(template))
-    
+        class_name = class_names[i]
+        templates[class_name] = extract_templates_from_pyramid(pyramid, test_image_bboxes)
+        #extract_templates_from_pyramid(pyramids[0], bboxes, 'upper')
+        #extract_templates_from_pyramid(pyramids[0], bboxes, 'lower')
+        #extract_templates_from_pyramid(pyramids[0], bboxes, 'both')
+        i += 1
 
-    #extract_templates_from_pyramid(pyramids[0], bboxes, 'upper')
-    #extract_templates_from_pyramid(pyramids[0], bboxes, 'lower')
-    #extract_templates_from_pyramid(pyramids[0], bboxes, 'both')
+    # Adding transparency to test image background
+    transparent_test_image = test_image.copy()
+    _, thresh = cv2.threshold(cv2.cvtColor(transparent_test_image, cv2.COLOR_BGR2GRAY), 245, 255, cv2.THRESH_BINARY)
+    transparent_test_image[thresh == 255] = 0
 
-    # TODO Stuff with pyramids
+    for k, v in templates.items():
+        print(f'{k} = {type(v)}')
+
+    #final_bboxes_list = template_match(transparent_test_image, templates)
+    #draw(test_image, final_bboxes_list)
+
 
 if __name__ == "__main__":
     main()
