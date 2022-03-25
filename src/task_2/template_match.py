@@ -1,6 +1,7 @@
 import cv2
 import os
 import sys
+import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 import configparser as cfgp
@@ -76,35 +77,31 @@ def create_gaussian_pyramid(image, rotations, scale_levels):
     return pyramid
 
 
-def preprocess(pyramids, rotations, scale_levels):
+def preprocess(pyramid):
     """
     Sets the background to 0 (black) for each scaled and rotated template.
+
+    ASSUMPTION: Assume template image itself does not get affected by this
 
     Parameters
     ----------
     pyramids : list
         A list of dictionaries representing the gaussian pyramids
 
-    rotations : int
-        the amount of rotations
-
-    scale_levels : int
-        the amount of subsampled images + the base image
-
     Returns
     -------
     pyramids : list
         Preprocessed list of dictionaries representing the gaussian pyramids
     """
-    for pyramid in pyramids:
-        for rot in range(rotations):
-            for level in range(0, scale_levels):
-                img = pyramid[rot][level].copy()
-                # Set background of img to black
-                ret, thresh = cv2.threshold(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY), 245, 255, cv2.THRESH_BINARY)
-                img[thresh == 255] = 0
-                pyramid[rot][level] = img
-    return pyramids
+    for rot_key in list(pyramid.keys()):
+        scale_levels = pyramid[rot_key]
+        for idx, img in enumerate(scale_levels):
+            # Set background of img to black
+            ret, thresh = cv2.threshold(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY), 245, 255, cv2.THRESH_BINARY)
+            img[thresh == 255] = 0
+            scale_levels[idx] = img
+        pyramid[rot_key] = scale_levels
+    return pyramid
 
 
 def get_bbox_dims(img):
@@ -143,7 +140,7 @@ def get_bbox_dims(img):
     return dims_list
 
 
-def extract_templates_from_pyramid(pyramid, scales, option='closest'):
+def extract_templates_from_pyramid(pyramid, bboxes, option='closest'):
     """
     TODO Description
     Options: closest, upper, lower, both
@@ -151,8 +148,8 @@ def extract_templates_from_pyramid(pyramid, scales, option='closest'):
 
     final_diags = [ ]
     
-    first_el = list(pyramid.values())[0]
-    diags = [(len(a) * np.sqrt(2)) for a in first_el]
+    first_scale_list = list(pyramid.values())[0]
+    diags = [np.sum(scale_level.shape[:-1]**2)**0.5 for scale_level in first_scale_list]
 
     def closest():
         closest = min(diags, key=lambda x: abs(x - diag))
@@ -193,8 +190,8 @@ def extract_templates_from_pyramid(pyramid, scales, option='closest'):
         'both': both
     }
 
-    for scale in scales:
-        diag = np.sqrt(scale[0] ** 2 + scale[1] ** 2)
+    for bbox in bboxes:
+        diag = np.sqrt(bbox[0] ** 2 + bbox[1] ** 2)
 
         if option not in funcs:
             # In case an invalid option was specified
@@ -203,10 +200,10 @@ def extract_templates_from_pyramid(pyramid, scales, option='closest'):
 
         funcs[option]()
     
-    result = []
+    result = [ ]
     indices = [diags.index(el) for el in final_diags]
     for level_list in pyramid.values():
-        result.append((el for i, el in enumerate(level_list) if i in indices))
+        result.append([el for i, el in enumerate(level_list) if i in indices])
 
     return result
         
@@ -337,24 +334,41 @@ def draw(img, bboxes):
 
 
 def main():
-    images = get_images(config.get('TrainingDataPath'))
-    test_images = get_images(config.get('TestImgDataPath'))
+    parser = argparse.ArgumentParser()
+    parser.add_argument("png_path", help="Path to a test image")
+    args = parser.parse_args()
+
+    templates = get_images(config.get('TrainingDataPath'))
+    test_image = cv2.imread(args.png_path)
     rots = config.getint('PyramidRotations')
     scale = config.getint('ScaleLevels')
 
     pyramids = [ ]
 
-    for image in images:
-        pyramid = create_gaussian_pyramid(image, rots, scale)
+    for template in templates:
+        pyramid = create_gaussian_pyramid(template, rots, scale)
         pyramids.append(pyramid)
 
     # TODO
     # Iterate over all test_images to get the bbox (currently we're only doing the first one)
     # Then use one of the settings (or all of them if you feel spicy)
     # to extract the right pyramid level(s) and call the template_match function
-    bboxes = get_bbox_dims(test_images[0])
+    bboxes = get_bbox_dims(test_image)
 
-    extract_templates_from_pyramid(pyramids[0], bboxes)
+    templates = [ ]
+    for pyramid in pyramids:
+        for key, value in pyramid.items():
+            for scaled_img in value:
+                _, thresh = cv2.threshold(cv2.cvtColor(scaled_img, cv2.COLOR_BGR2GRAY), 245, 255, cv2.THRESH_BINARY)
+                scaled_img[thresh == 255] = 0
+            templates.append(extract_templates_from_pyramid(pyramid, bboxes))
+
+    print(templates)
+    
+    for template in templates:
+        print(type(template))
+    
+
     #extract_templates_from_pyramid(pyramids[0], bboxes, 'upper')
     #extract_templates_from_pyramid(pyramids[0], bboxes, 'lower')
     #extract_templates_from_pyramid(pyramids[0], bboxes, 'both')
