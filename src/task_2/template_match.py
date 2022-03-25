@@ -144,40 +144,58 @@ def extract_templates_from_pyramid(pyramid, bboxes, option='closest'):
     """
     TODO Description
     Options: closest, upper, lower, both
+
+    CHECK IF RESAMPLING CAN FIX ISSUES
+
+    Parameters:
+    pyramid : dict
+        keys: rotation_index , values: list of template arrays at different scales with a given orientation
+    
+    bboxes : list
+        list of (w,h) tuples for the bboxes found of objects in the image
+    
+    option : str
+        closest : returns scales 
+
+    Returns:
+    --------
+    filtered_pyramid : dict
+        keys: rotation_index , values: list of template arrays at required scales with a given orientation
+
     """
 
-    final_diags = [ ]
+    final_scale_diags = [ ]
     
     first_scale_list = list(pyramid.values())[0]
-    diags = [np.sum(scale_level.shape[:-1]**2)**0.5 for scale_level in first_scale_list]
+    bbox_diags = [np.sum(scale_level.shape[:-1]**2)**0.5 for scale_level in first_scale_list]
 
     def closest():
-        closest = min(diags, key=lambda x: abs(x - diag))
-        if closest not in final_diags:
-            final_diags.append(closest)
+        closest = min(bbox_diags, key=lambda x: abs(x - diag))
+        if closest not in final_scale_diags:
+            final_scale_diags.append(closest)
 
     def upper():
-        c_diags = diags.copy()
-        c_diags.reverse()
+        c_bbox_diags = bbox_diags.copy()
+        c_bbox_diags.reverse()
 
-        upper = c_diags[-1]
-        for d in c_diags:
+        upper = c_bbox_diags[-1]
+        for d in c_bbox_diags:
             if diag < d:
                 upper = d
                 break
 
-        if upper not in final_diags:
-            final_diags.append(upper)
+        if upper not in final_scale_diags:
+            final_scale_diags.append(upper)
 
     def lower():
-        lower = diags[-1]
-        for d in diags:
+        lower = bbox_diags[-1]
+        for d in bbox_diags:
             if diag > d:
                 lower = d
                 break
 
-        if lower not in final_diags:
-            final_diags.append(lower)
+        if lower not in final_scale_diags:
+            final_scale_diags.append(lower)
 
     def both():
         upper()
@@ -200,10 +218,11 @@ def extract_templates_from_pyramid(pyramid, bboxes, option='closest'):
 
         funcs[option]()
     
-    result = [ ]
-    indices = [diags.index(el) for el in final_diags]
-    for level_list in pyramid.values():
-        result.append([el for i, el in enumerate(level_list) if i in indices])
+    filtered_pyramid = {}
+
+    indices = [bbox_diags.index(el) for el in final_scale_diags]
+    for rot_key, level_list in pyramid.items():
+        filtered_pyramid[rot_key] = [scaled_template for scale_level_index, scaled_template in enumerate(level_list) if scale_level_index in indices]
 
     return result
         
