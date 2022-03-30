@@ -409,7 +409,6 @@ def draw(img, results_dict):
 	cv2.waitKey(0)
 
 
-
 def algorithm_run(png_path):
 	loaded_templates = get_images(config.get('TrainingDataPath'))
 	test_image = cv2.imread(png_path)
@@ -465,7 +464,7 @@ def algorithm_run(png_path):
     #     temps = templates[k][1]
     #     ic(len(temps), temps[0].shape)
 	final_bboxes_dict = template_match(transparent_test_image, N, templates)
-	draw(test_image, final_bboxes_dict)
+	#draw(test_image, final_bboxes_dict)
 	return final_bboxes_dict
 
 
