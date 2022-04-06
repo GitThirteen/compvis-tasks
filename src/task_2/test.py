@@ -28,6 +28,7 @@ def parse_annotation_txt_files(path_to_txt_files):
     '''
     txt_paths = [f for f in os.listdir(path_to_txt_files) if f.endswith('.txt')]
     txt_paths = sort_ascending(txt_paths)
+    
     labels_dict_list = []
     for f in txt_paths:
         labels_dict = {}

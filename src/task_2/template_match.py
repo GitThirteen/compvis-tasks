@@ -3,6 +3,7 @@ import os
 import sys
 import argparse
 import re
+from cv2 import rotate
 import numpy as np
 import configparser as cfgp
 from helpers import draw_gaussian_pyramid, get_images
@@ -49,16 +50,16 @@ def create_gaussian_pyramid(image, rotations, scale_levels):
 
     # rotation step size
     step = 360 / rotations
-    
+
     # loop for every rotation
     for rot in range(rotations):
         # create a rot matrix and rotate image
         rot_m = cv2.getRotationMatrix2D((h // 2, w // 2), step * rot, 1.0)
         img = cv2.warpAffine(image, rot_m, (w, h))
-        
+
         # add first "default" image as pyramid base
         pyramid[rot] = [ img ]
-        
+
         # loop for the rest of the pyramid
         for level in range(1, scale_levels):
             # blur image with gaussian and remove all even rows
@@ -141,6 +142,9 @@ def get_bbox_dims(img):
     # cv2.imshow('bboxs detected from raw image',new)
     # cv2.waitKey(0)
 
+    # cv2.imshow('bboxs detected from raw image',new)
+    # cv2.waitKey(0)
+
     return dims_list
 
 
@@ -152,10 +156,10 @@ def extract_templates_from_pyramid(pyramid, bboxes, option='closest'):
     Parameters:
     pyramid : dict
         keys: rotation_index , values: list of template arrays at different scales with a given orientation
-    
+
     bboxes : list
         list of (w,h) tuples for the bboxes found of objects in the image
-    
+
     option : str
         closest : returns scales
 
@@ -167,7 +171,7 @@ def extract_templates_from_pyramid(pyramid, bboxes, option='closest'):
     """
 
     final_scale_diags = [ ]
-    
+
     first_scale_list = list(pyramid.values())[0]
     scale_diags = [np.sqrt(scale_lvl.shape[0] ** 2 + scale_lvl.shape[1] ** 2) for scale_lvl in first_scale_list]
 
@@ -218,7 +222,7 @@ def extract_templates_from_pyramid(pyramid, bboxes, option='closest'):
             sys.exit(1)
 
         funcs[option]()
-    
+
     filtered_pyramid = { }
     indices = [scale_diags.index(el) for el in final_scale_diags]
 
@@ -226,9 +230,8 @@ def extract_templates_from_pyramid(pyramid, bboxes, option='closest'):
         filtered_pyramid[rot_key] = [scaled_template for scale_level_index, scaled_template in enumerate(level_list) if scale_level_index in indices]
 
     return filtered_pyramid
-        
 
-def template_match(img, N,template_dict):
+def template_match(img, N, template_dict):
 	"""
 	Convolves a set of templates across an image and returns a list containing the bbox of matches.
 	code based off tutorial : https://docs.opencv.org/3.4/d4/dc6/tutorial_py_template_matching.html
@@ -394,7 +397,6 @@ def draw(img, results_dict):
 	final_image : np.ndarray
 					Final image with bboxes and labels represented as a 3d numpy array
     '''
-	
 	img2 = img.copy()
 	# pick a N distinct labels based on number of objects
 	ic(results_dict)
@@ -436,7 +438,7 @@ def algorithm_run(png_path):
 				scaled_img[thresh == 255] = 0
 
 		class_name = class_names[i]
-		templates[class_name] = extract_templates_from_pyramid(pyramid, test_image_bboxes)
+		templates[class_name] = extract_templates_from_pyramid(pyramid, test_image_bboxes, 'both')
 		#extract_templates_from_pyramid(pyramids[0], bboxes, 'upper')
 		#extract_templates_from_pyramid(pyramids[0], bboxes, 'lower')
 		#extract_templates_from_pyramid(pyramids[0], bboxes, 'both')
@@ -465,8 +467,10 @@ def algorithm_run(png_path):
 
 	if config.getboolean('ShowResults'):
 		draw(test_image, final_bboxes_dict)
-		
+	
 	return final_bboxes_dict
+
+
 
 def main():
 	# Parsing image file and declaring necessary params for pyramid generation
@@ -475,7 +479,6 @@ def main():
 	args = parser.parse_args()
 
 	algorithm_run(args.png_path)
-	
 
 if __name__ == "__main__":
     main()
