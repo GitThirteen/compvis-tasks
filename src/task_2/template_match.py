@@ -462,8 +462,11 @@ def algorithm_run(png_path):
     #     temps = templates[k][1]
     #     ic(len(temps), temps[0].shape)
 	final_bboxes_dict = template_match(transparent_test_image, N, templates)
-	# draw(test_image, final_bboxes_list)
-	return (test_image, final_bboxes_dict)
+
+	if config.getboolean('ShowResults'):
+		draw(test_image, final_bboxes_dict)
+		
+	return final_bboxes_dict
 
 def main():
 	# Parsing image file and declaring necessary params for pyramid generation
@@ -471,8 +474,8 @@ def main():
 	parser.add_argument("png_path", help="Path to a test image")
 	args = parser.parse_args()
 
-	test_image, bboxes = algorithm_run(args.png_path)
-	draw(test_image, bboxes)
+	algorithm_run(args.png_path)
+	
 
 if __name__ == "__main__":
     main()
