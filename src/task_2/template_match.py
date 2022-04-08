@@ -81,7 +81,7 @@ def create_gaussian_pyramid(image, rotations, scale_levels):
 
 
 def preprocess(pyramid):
-    """
+	"""
     Sets the background to 0 (black) for each scaled and rotated template.
 	We assume that the template image itself does not get affected by this.
 
@@ -95,15 +95,21 @@ def preprocess(pyramid):
     pyramids : list
         Preprocessed list of dictionaries representing the gaussian pyramids
     """
-    for rot_key in list(pyramid.keys()):
-        scale_levels = pyramid[rot_key]
-        for idx, img in enumerate(scale_levels):
-            # Set background of img to black
-            ret, thresh = cv2.threshold(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY), 245, 255, cv2.THRESH_BINARY)
-            img[thresh == 255] = 0
-            scale_levels[idx] = img
-        pyramid[rot_key] = scale_levels
-    return pyramid
+	kernel = np.ones(5, 5, np.uint8)
+
+	for rotation in list(pyramid.keys()):
+		scale_levels = pyramid[rotation]
+		for i, img in enumerate(scale_levels):
+			# Set bg of image to black
+			_, thresh = cv2.threshold(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY), 245, 255, cv2.THRESH_BINARY)
+			img[thresh == 255] = 0
+			# Morphologically open image with set kernel to get rid of single pixels
+			# that didn't get filtered out in the step before
+			img = cv2.morphologyEx(img, cv2.MORPH_OPEN, kernel)
+
+			scale_levels[i] = img
+		pyramid[rotation] = scale_levels
+	return pyramid
 
 
 def get_bbox_dims(img):
