@@ -19,82 +19,82 @@ Create a function to take in a list of scales and a gaussian pyramid of a templa
 Update template matching and research scores - Vish
 '''
 def create_gaussian_pyramid(image, rotations, scale_levels):
-    """
-    Creates a gaussian pyramid for a training data image via blurring and subsequent
-    subsampling. Furthermore, for a specified amount of rotations, generates additional
-    pyramids and adds them to the dictionary.
+	"""
+	Creates a gaussian pyramid for a training data image via blurring and subsequent
+	subsampling. Furthermore, for a specified amount of rotations, generates additional
+	pyramids and adds them to the dictionary.
 
-    Parameters
-    ----------
-    image : matrix
-        the image for which the gaussian pyramid(s) will be created
+	Parameters
+	----------
+	image : matrix
+		the image for which the gaussian pyramid(s) will be created
 
-    rotations : int
-        the amount of rotations
+	rotations : int
+		the amount of rotations
 
-    scale_levels : int
-        the amount of subsampled images + the base image
+	scale_levels : int
+		the amount of subsampled images + the base image
 
-    Returns
-    -------
-    pyramid : dict
-        a dictionary containing the pyramid for the passed in image. The key is the rotation factor (e.g. 0, 1, 2, 3) of the image.
-    """
+	Returns
+	-------
+	pyramid : dict
+		a dictionary containing the pyramid for the passed in image. The key is the rotation factor (e.g. 0, 1, 2, 3) of the image.
+	"""
 
-    pyramid = { }
+	pyramid = { }
 
-    # fetch height, width of image & sigma and k for gaussian kernel
-    (h, w) = image.shape[:2]
-    sigma = config.getfloat('GaussianSigma')
-    k = config.getint('GaussianKernelSize')
+	# fetch height, width of image & sigma and k for gaussian kernel
+	(h, w) = image.shape[:2]
+	sigma = config.getfloat('GaussianSigma')
+	k = config.getint('GaussianKernelSize')
 
-    # rotation step size
-    step = 360 / rotations
+	# rotation step size
+	step = 360 / rotations
 
-    # loop for every rotation
-    for rot in range(rotations):
-        # create a rot matrix and rotate image
-        rot_m = cv2.getRotationMatrix2D((h // 2, w // 2), step * rot, 1.0)
-        img = cv2.warpAffine(image, rot_m, (w, h))
+	# loop for every rotation
+	for rot in range(rotations):
+		# create a rot matrix and rotate image
+		rot_m = cv2.getRotationMatrix2D((h // 2, w // 2), step * rot, 1.0)
+		img = cv2.warpAffine(image, rot_m, (w, h))
 
-        # add first "default" image as pyramid base
-        pyramid[rot] = [ img ]
+		# add first "default" image as pyramid base
+		pyramid[rot] = [ img ]
 
-        # loop for the rest of the pyramid
-        for level in range(1, scale_levels):
-            # blur image with gaussian and remove all even rows
-            # and cols (subsampling)
-            '''
-            TODO:
-            Research how sigma / gaussian kernel size should change as level increases
-            '''
-            img = cv2.GaussianBlur(img, (k, k), sigma)
-            img = np.delete(img, range(1, img.shape[0], 2), axis=0)
-            img = np.delete(img, range(1, img.shape[1], 2), axis=1)
-            # add new image to pyramid
-            pyramid[rot].append(img)
+		# loop for the rest of the pyramid
+		for level in range(1, scale_levels):
+			# blur image with gaussian and remove all even rows
+			# and cols (subsampling)
+			'''
+			TODO:
+			Research how sigma / gaussian kernel size should change as level increases
+			'''
+			img = cv2.GaussianBlur(img, (k, k), sigma)
+			img = np.delete(img, range(1, img.shape[0], 2), axis=0)
+			img = np.delete(img, range(1, img.shape[1], 2), axis=1)
+			# add new image to pyramid
+			pyramid[rot].append(img)
 
-    if config.getboolean('ShowPyramid') == True:
-        draw_gaussian_pyramid(pyramid, scale_levels, rotations)
+	if config.getboolean('ShowPyramid') == True:
+		draw_gaussian_pyramid(pyramid, scale_levels, rotations)
 
-    return pyramid
+	return pyramid
 
 
 def preprocess(pyramid):
 	"""
-    Sets the background to 0 (black) for each scaled and rotated template.
+	Sets the background to 0 (black) for each scaled and rotated template.
 	We assume that the template image itself does not get affected by this.
 
-    Parameters
-    ----------
-    pyramids : list
-        A list of dictionaries representing the gaussian pyramids
+	Parameters
+	----------
+	pyramids : list
+		A list of dictionaries representing the gaussian pyramids
 
-    Returns
-    -------
-    pyramids : list
-        Preprocessed list of dictionaries representing the gaussian pyramids
-    """
+	Returns
+	-------
+	pyramids : list
+		Preprocessed list of dictionaries representing the gaussian pyramids
+	"""
 	kernel = np.ones(5, 5, np.uint8)
 
 	for rotation in list(pyramid.keys()):
@@ -113,129 +113,129 @@ def preprocess(pyramid):
 
 
 def get_bbox_dims(img):
-    """
-    Finds dimensions for bounding boxes in passed in image.
+	"""
+	Finds dimensions for bounding boxes in passed in image.
 
-    Parameters
-    ----------
-    img : np.ndarray
-     return value of cv2.imread(img_path), a 3d numpy array
+	Parameters
+	----------
+	img : np.ndarray
+	 return value of cv2.imread(img_path), a 3d numpy array
 
-    Returns
-    -------
-    dims_list: list
-     list containing width and height of each bbox in image as tuples [(width, height), ....]
-    """
-    dims_list = []
-    new = img.copy()
+	Returns
+	-------
+	dims_list: list
+	 list containing width and height of each bbox in image as tuples [(width, height), ....]
+	"""
+	dims_list = []
+	new = img.copy()
 
-    # Blur the image
-    blur = cv2.GaussianBlur(new, (11, 11), 3)
-    # Convert the image to grayscale
-    grey = cv2.cvtColor(blur, cv2.COLOR_BGR2GRAY)
+	# Blur the image
+	blur = cv2.GaussianBlur(new, (11, 11), 3)
+	# Convert the image to grayscale
+	grey = cv2.cvtColor(blur, cv2.COLOR_BGR2GRAY)
 
-    # Convert the grayscale image to binary
-    ret, binary = cv2.threshold(grey, 250, 255, cv2.THRESH_BINARY)
-    contours, hierarchy = cv2.findContours(~binary, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+	# Convert the grayscale image to binary
+	ret, binary = cv2.threshold(grey, 250, 255, cv2.THRESH_BINARY)
+	contours, hierarchy = cv2.findContours(~binary, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
-    for contour in contours:
-        x, y, w, h = cv2.boundingRect(contour)
-        if (w * h) > 500:
-            dims = (w, h)
-            cv2.rectangle(new,(x,y), (x+w,y+h), (255,0,0), 5)
-            dims_list.append(dims)
-    
-    # cv2.imshow('bboxs detected from raw image',new)
-    # cv2.waitKey(0)
+	for contour in contours:
+		x, y, w, h = cv2.boundingRect(contour)
+		if (w * h) > 500:
+			dims = (w, h)
+			cv2.rectangle(new,(x,y), (x+w,y+h), (255,0,0), 5)
+			dims_list.append(dims)
 
-    # cv2.imshow('bboxs detected from raw image',new)
-    # cv2.waitKey(0)
+	# cv2.imshow('bboxs detected from raw image',new)
+	# cv2.waitKey(0)
 
-    return dims_list
+	# cv2.imshow('bboxs detected from raw image',new)
+	# cv2.waitKey(0)
+
+	return dims_list
 
 
 def extract_templates_from_pyramid(pyramid, bboxes, option='closest'):
-    """
-    TODO Description
-    Options: closest, upper, lower, both
+	"""
+	TODO Description
+	Options: closest, upper, lower, both
 
-    Parameters:
-    pyramid : dict
-        keys: rotation_index , values: list of template arrays at different scales with a given orientation
+	Parameters:
+	pyramid : dict
+		keys: rotation_index , values: list of template arrays at different scales with a given orientation
 
-    bboxes : list
-        list of (w,h) tuples for the bboxes found of objects in the image
+	bboxes : list
+		list of (w,h) tuples for the bboxes found of objects in the image
 
-    option : str
-        closest : returns scales
+	option : str
+		closest : returns scales
 
-    Returns:
-    --------
-    filtered_pyramid : dict
-        keys: rotation_index , values: list of template arrays at required scales with a given orientation
+	Returns:
+	--------
+	filtered_pyramid : dict
+		keys: rotation_index , values: list of template arrays at required scales with a given orientation
 
-    """
+	"""
 
-    final_scale_diags = [ ]
+	final_scale_diags = [ ]
 
-    first_scale_list = list(pyramid.values())[0]
-    scale_diags = [np.sqrt(scale_lvl.shape[0] ** 2 + scale_lvl.shape[1] ** 2) for scale_lvl in first_scale_list]
+	first_scale_list = list(pyramid.values())[0]
+	scale_diags = [np.sqrt(scale_lvl.shape[0] ** 2 + scale_lvl.shape[1] ** 2) for scale_lvl in first_scale_list]
 
-    def closest():
-        closest = min(scale_diags, key=lambda x: abs(x - diag))
-        if closest not in final_scale_diags:
-            final_scale_diags.append(closest)
+	def closest():
+		closest = min(scale_diags, key=lambda x: abs(x - diag))
+		if closest not in final_scale_diags:
+			final_scale_diags.append(closest)
 
-    def upper():
-        c_bbox_diags = scale_diags.copy()
-        c_bbox_diags.reverse()
+	def upper():
+		c_bbox_diags = scale_diags.copy()
+		c_bbox_diags.reverse()
 
-        upper = c_bbox_diags[-1]
-        for d in c_bbox_diags:
-            if diag < d:
-                upper = d
-                break
+		upper = c_bbox_diags[-1]
+		for d in c_bbox_diags:
+			if diag < d:
+				upper = d
+				break
 
-        if upper not in final_scale_diags:
-            final_scale_diags.append(upper)
+		if upper not in final_scale_diags:
+			final_scale_diags.append(upper)
 
-    def lower():
-        lower = scale_diags[-1]
-        for d in scale_diags:
-            if diag > d:
-                lower = d
-                break
+	def lower():
+		lower = scale_diags[-1]
+		for d in scale_diags:
+			if diag > d:
+				lower = d
+				break
 
-        if lower not in final_scale_diags:
-            final_scale_diags.append(lower)
+		if lower not in final_scale_diags:
+			final_scale_diags.append(lower)
 
-    def both():
-        upper()
-        lower()
+	def both():
+		upper()
+		lower()
 
-    funcs = {
-        'closest': closest,
-        'upper': upper,
-        'lower': lower,
-        'both': both
-    }
+	funcs = {
+		'closest': closest,
+		'upper': upper,
+		'lower': lower,
+		'both': both
+	}
 
-    for bbox in bboxes:
-        diag = np.sqrt(bbox[0] ** 2 + bbox[1] ** 2)
-        if option not in funcs:
-            # In case an invalid option was specified
-            print(f'[ERROR] Option {option} does not exist.')
-            sys.exit(1)
+	for bbox in bboxes:
+		diag = np.sqrt(bbox[0] ** 2 + bbox[1] ** 2)
+		if option not in funcs:
+			# In case an invalid option was specified
+			print(f'[ERROR] Option {option} does not exist.')
+			sys.exit(1)
 
-        funcs[option]()
+		funcs[option]()
 
-    filtered_pyramid = { }
-    indices = [scale_diags.index(el) for el in final_scale_diags]
+	filtered_pyramid = { }
+	indices = [scale_diags.index(el) for el in final_scale_diags]
 
-    for rot_key, level_list in pyramid.items():
-        filtered_pyramid[rot_key] = [scaled_template for scale_level_index, scaled_template in enumerate(level_list) if scale_level_index in indices]
+	for rot_key, level_list in pyramid.items():
+		filtered_pyramid[rot_key] = [scaled_template for scale_level_index, scaled_template in enumerate(level_list) if scale_level_index in indices]
 
-    return filtered_pyramid
+	return filtered_pyramid
 
 def template_match(img, N, template_dict):
 	"""
@@ -246,21 +246,21 @@ def template_match(img, N, template_dict):
 	----------
 	img : np.ndarray
 		return value of cv2.imread(img_path), a 3d numpy array
-	
+
 	N : int
 		number of objects found in test image
-	
+
 	template_dict: dict
 					key - class for template, eg 'theater, silo, flower ...'
-					value - pyramid dict of rotated templates for that class (k: rotation_idx, v: list of scaled templates)	
+					value - pyramid dict of rotated templates for that class (k: rotation_idx, v: list of scaled templates)
 		Each template is 3D numpy array with using the same axis ordering conventions as used by arrays returned from cv2.imread()
 
 	Returns
 	-------
 	results_dict: dict
-					key - class of template 
-					value - list containing bbox corners for cv2.rectangles [upper_left, bottom_right] 
-					
+					key - class of template
+					value - list containing bbox corners for cv2.rectangles [upper_left, bottom_right]
+
 	"""
 	# TODO
 				# IMPLEMENT DICTs
@@ -277,10 +277,10 @@ def template_match(img, N, template_dict):
 	# methods = ['cv2.TM_CCOEFF', 'cv2.TM_CCOEFF_NORMED', 'cv2.TM_CCORR',
 			# 'cv2.TM_CCORR_NORMED', 'cv2.TM_SQDIFF', 'cv2.TM_SQDIFF_NORMED']
 	methods = ['cv2.TM_SQDIFF']
-    # init results dict
+	# init results dict
 	class_bbox_scores_dict = {}
 
-    # loop over classes
+	# loop over classes
 	for class_,template_pyramid in template_dict.items():
 		class_bboxes = []
 		# initialise score dict to keep track of template giving highest score
@@ -303,8 +303,8 @@ def template_match(img, N, template_dict):
 					EDGE CASE: multiple matches of template in image cv2.minMaxLoc will not be sufficient
 					how to detect if multiple detections?
 					'''
-					min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res) 
-					
+					min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
+
 					# update score dict if current template has a better similarity / match
 					'''
 					make this block more efficient via a function to populate dict?
@@ -323,23 +323,23 @@ def template_match(img, N, template_dict):
 							top_left = np.asarray(max_loc)
 							bottom_right = np.asarray((top_left[0] + w, top_left[1] + h))
 							class_scores_dict[meth]['bbox']=(top_left,bottom_right)
-					
+
 					else:
 						# only update dict if scores are better
 						if meth in ['cv2.TM_SQDIFF', 'cv2.TM_SQDIFF_NORMED']:
 							# If the method is TM_SQDIFF or TM_SQDIFF_NORMED, take minimum
-							if class_scores_dict[meth]['score'] > min_val: 
+							if class_scores_dict[meth]['score'] > min_val:
 								class_scores_dict[meth]['score'] = min_val
 								top_left = np.asarray(min_loc)
 								bottom_right = np.asarray((top_left[0] + w, top_left[1] + h))
 								class_scores_dict[meth]['bbox']=(top_left,bottom_right)
 						else:
-							if class_scores_dict[meth]['score'] < max_val: 
+							if class_scores_dict[meth]['score'] < max_val:
 								class_scores_dict[meth]['score'] = max_val
 								top_left = np.asarray(max_loc)
 								bottom_right = np.asarray((top_left[0] + w, top_left[1] + h))
 								class_scores_dict[meth]['bbox']=(top_left,bottom_right)
-					
+
 					# ic(class_,class_scores_dict[meth]['score']/1e6)
 					# cv2.rectangle(img2,top_left,bottom_right,(255, 0, 0), 2)
 					# cv2.imshow('bbox found',img2)
@@ -347,10 +347,31 @@ def template_match(img, N, template_dict):
 					# cv2.waitKey(0)
 		# store final results for class in dict
 		class_bbox_scores_dict[class_] = class_scores_dict
+
+	# Check if any classes have overlapping bboxes, and remove class with highest score if overlapping
+	classes_to_remove = []
+	for class_, class_scores_dict in class_bbox_scores_dict.items():
+		for class2_, class_scores_dict2 in class_bbox_scores_dict.items():
+			if class_ == class2_:
+				continue
+
+			iou = get_bbox_iou(class_scores_dict['cv2.TM_SQDIFF']['bbox'], class_scores_dict2['cv2.TM_SQDIFF']['bbox'])
+
+			if iou > 0.3:
+				if class_scores_dict['cv2.TM_SQDIFF']['score'] < class_scores_dict2['cv2.TM_SQDIFF']['score']:
+					if class2_ not in classes_to_remove:
+						classes_to_remove.append(class2_)
+				else:
+					if class_ not in classes_to_remove:
+						classes_to_remove.append(class_)
+
+	for class_ in classes_to_remove:
+		del class_bbox_scores_dict[class_]
+
 	# pick a N distinct bboxs, where N is number of objects found in image
 	classes = list(class_bbox_scores_dict.keys())
 	sorted_results = np.zeros((len(classes),len(methods)))
-	
+
 	# loop over methods
 	for idx,meth in enumerate(methods):
 		method_scores = []
@@ -358,12 +379,12 @@ def template_match(img, N, template_dict):
 		for class_, class_scores_dict in class_bbox_scores_dict.items():
 			method_scores.append((class_,class_scores_dict[meth]['score']/1e6))
 		# sort scores to find classes that were most strongly picked up by each method
-		sorted_method_scores = sorted(method_scores, key = lambda x: x[1]) 
+		sorted_method_scores = sorted(method_scores, key = lambda x: x[1])
 		# sort in descending order if meth TM_SQDIFF or TM_SQDIFF_NORMED else ascending
 		sorted_method_scores = sorted_method_scores[::-1] if meth in ["TM_SQDIFF", "TM_SQDIFF_NORMED"] else sorted_method_scores
 		sorted_results[:,idx]  = [classes.index(class_score_tuple[0]) for class_score_tuple in sorted_method_scores]
 
-	
+
 	# pick top N classes
 	top_n_classes = []
 	for class_idx in np.median(sorted_results,1):
@@ -374,16 +395,35 @@ def template_match(img, N, template_dict):
 	results_dict = {}
 	for class_ in top_n_classes:
 		class_scores_dict = class_bbox_scores_dict[class_]
-		top_left_corners = [class_scores_dict[meth]['bbox'][0] for meth in methods] 
+		top_left_corners = [class_scores_dict[meth]['bbox'][0] for meth in methods]
 		bottom_right_corners = [class_scores_dict[meth]['bbox'][1] for meth in methods]
 		median_top_left = np.median(top_left_corners,0)
 		median_bottom_right = np.median(bottom_right_corners,0)
 
 		results_dict[class_] = (median_top_left,median_bottom_right)
-			
+
 	return results_dict
 
+def get_bbox_iou(bbox1, bbox2):
+	if bbox1[0][0] == bbox2[0][0] and bbox1[0][1] == bbox2[0][1] and bbox1[1][0] == bbox2[1][0] and bbox1[1][1] == bbox2[1][1]:
+		return 1.0
 
+	x_left = max(bbox1[0][0], bbox2[0][0])
+	y_top = max(bbox1[0][1], bbox2[0][1])
+	x_right = min(bbox1[1][0], bbox2[1][0])
+	y_bottom = min(bbox1[1][1], bbox2[1][1])
+
+	if x_right < x_left or y_bottom < y_top:
+		return 0.0
+
+	intersection_area = (x_right - x_left + 1) * (y_bottom - y_top + 1)
+
+	bbox1_area = (bbox1[1][0] - bbox1[0][0] + 1) * (bbox1[1][1] - bbox1[1][0] + 1)
+	bbox2_area = (bbox2[1][0] - bbox2[0][0] + 1) * (bbox2[1][1] - bbox2[1][0] + 1)
+
+	iou = intersection_area / float(bbox1_area + bbox2_area - intersection_area)
+
+	return iou
 
 def draw(img, results_dict):
 	'''
@@ -402,7 +442,7 @@ def draw(img, results_dict):
 	-------
 	final_image : np.ndarray
 					Final image with bboxes and labels represented as a 3d numpy array
-    '''
+	'''
 	img2 = img.copy()
 	# pick a N distinct labels based on number of objects
 	ic(results_dict)
@@ -412,7 +452,7 @@ def draw(img, results_dict):
 
 	cv2.imshow('test', img2)
 	cv2.waitKey(0)
-	
+
 
 
 def algorithm_run(png_path):
@@ -434,7 +474,7 @@ def algorithm_run(png_path):
 	# Extract image classes from file names
 	file_names = os.listdir(config.get('TrainingDataPath'))
 	class_names = [re.search('-(.*)\.', name).group(1) for name in file_names]
-    
+
 	templates = { }
 	i = 0
 	for pyramid in pyramids:
@@ -444,7 +484,7 @@ def algorithm_run(png_path):
 				scaled_img[thresh == 255] = 0
 
 		class_name = class_names[i]
-		templates[class_name] = extract_templates_from_pyramid(pyramid, test_image_bboxes, 'both')
+		templates[class_name] = extract_templates_from_pyramid(pyramid, test_image_bboxes)
 		#extract_templates_from_pyramid(pyramids[0], bboxes, 'upper')
 		#extract_templates_from_pyramid(pyramids[0], bboxes, 'lower')
 		#extract_templates_from_pyramid(pyramids[0], bboxes, 'both')
@@ -459,21 +499,21 @@ def algorithm_run(png_path):
 	transparent_test_image[thresh == 255] = 0
 
 
-    # ic(loaded_templates[0].shape, test_image_bboxes)
-    
-    # # list of list containing templates resized to each scale detected in test_image_bbox [[temp_1_scale_1, temp_1_scale_2,...],...]
-    # scaled_templates = [[template.reshape(*dims,-1) for dims in test_image_bboxes] for template in loaded_templates]
+	# ic(loaded_templates[0].shape, test_image_bboxes)
 
-    # # test templates dict following k = class_name, v = dict(k: rot_key, v:list of loaded templates at different scales) 
-    # test_templates = {class_names[i]: {1:scaled_templates[i]} for i in range(class_names)}
-    # for k,v in templates.items():
-    #     temps = templates[k][1]
-    #     ic(len(temps), temps[0].shape)
+	# # list of list containing templates resized to each scale detected in test_image_bbox [[temp_1_scale_1, temp_1_scale_2,...],...]
+	# scaled_templates = [[template.reshape(*dims,-1) for dims in test_image_bboxes] for template in loaded_templates]
+
+	# # test templates dict following k = class_name, v = dict(k: rot_key, v:list of loaded templates at different scales)
+	# test_templates = {class_names[i]: {1:scaled_templates[i]} for i in range(class_names)}
+	# for k,v in templates.items():
+	#     temps = templates[k][1]
+	#     ic(len(temps), temps[0].shape)
 	final_bboxes_dict = template_match(transparent_test_image, N, templates)
 
 	if config.getboolean('ShowResults'):
 		draw(test_image, final_bboxes_dict)
-	
+
 	return final_bboxes_dict
 
 
@@ -487,4 +527,4 @@ def main():
 	algorithm_run(args.png_path)
 
 if __name__ == "__main__":
-    main()
+	main()
