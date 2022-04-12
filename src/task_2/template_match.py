@@ -405,7 +405,7 @@ def template_match(img, N, template_dict):
 	return results_dict
 
 def get_bbox_iou(bbox1, bbox2):
-	if bbox1[0][0] == bbox2[0][0] and bbox1[0][1] == bbox2[0][1] and bbox1[1][0] == bbox2[1][0] and bbox1[1][1] == bbox2[1][1]:
+	if (bbox1[0] == bbox2[0]).all() and (bbox1[1] == bbox2[1]).all():
 		return 1.0
 
 	x_left = max(bbox1[0][0], bbox2[0][0])
