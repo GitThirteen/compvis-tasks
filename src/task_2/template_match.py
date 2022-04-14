@@ -11,13 +11,8 @@ from icecream import ic
 
 config = cfgp.ConfigParser()
 config.read(os.path.join(os.path.dirname(__file__), '../settings.INI'))
-config = config['TASK2']
+config = config['TASK2_3']
 
-'''
-TODO:
-Create a function to take in a list of scales and a gaussian pyramid of a template and return the template at those scales. - Michael
-Update template matching and research scores - Vish
-'''
 def create_gaussian_pyramid(image, rotations, scale_levels):
 	"""
 	Creates a gaussian pyramid for a training data image via blurring and subsequent
@@ -61,20 +56,15 @@ def create_gaussian_pyramid(image, rotations, scale_levels):
 		pyramid[rot] = [ img ]
 
 		# loop for the rest of the pyramid
-		for level in range(1, scale_levels):
-			# blur image with gaussian and remove all even rows
-			# and cols (subsampling)
-			'''
-			TODO:
-			Research how sigma / gaussian kernel size should change as level increases
-			'''
+		for _ in range(1, scale_levels):
+			# blur image with gaussian and remove all even rows and cols (subsampling)
 			img = cv2.GaussianBlur(img, (k, k), sigma)
 			img = np.delete(img, range(1, img.shape[0], 2), axis=0)
 			img = np.delete(img, range(1, img.shape[1], 2), axis=1)
 			# add new image to pyramid
 			pyramid[rot].append(img)
 
-	if config.getboolean('ShowPyramid') == True:
+	if config.getboolean('ShowPyramid'):
 		draw_gaussian_pyramid(pyramid, scale_levels, rotations)
 
 	return pyramid
@@ -498,17 +488,6 @@ def algorithm_run(png_path):
 	_, thresh = cv2.threshold(cv2.cvtColor(transparent_test_image, cv2.COLOR_BGR2GRAY), 245, 255, cv2.THRESH_BINARY)
 	transparent_test_image[thresh == 255] = 0
 
-
-	# ic(loaded_templates[0].shape, test_image_bboxes)
-
-	# # list of list containing templates resized to each scale detected in test_image_bbox [[temp_1_scale_1, temp_1_scale_2,...],...]
-	# scaled_templates = [[template.reshape(*dims,-1) for dims in test_image_bboxes] for template in loaded_templates]
-
-	# # test templates dict following k = class_name, v = dict(k: rot_key, v:list of loaded templates at different scales)
-	# test_templates = {class_names[i]: {1:scaled_templates[i]} for i in range(class_names)}
-	# for k,v in templates.items():
-	#     temps = templates[k][1]
-	#     ic(len(temps), temps[0].shape)
 	final_bboxes_dict = template_match(transparent_test_image, N, templates)
 
 	if config.getboolean('ShowResults'):

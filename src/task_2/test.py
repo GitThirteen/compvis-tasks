@@ -6,7 +6,7 @@ import configparser as cfgp
 
 config = cfgp.ConfigParser()
 config.read(os.path.join(os.path.dirname(__file__), '../settings.INI'))
-config = config['TASK2']
+config = config['TASK2_3']
 
 def sort_ascending(list):
     return sorted(list, key = lambda e: int(e.split('_')[-1].split('.')[0]))
