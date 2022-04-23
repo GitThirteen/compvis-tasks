@@ -281,8 +281,12 @@ if __name__ == "__main__":
 
     results = {}
     for bbox_idx, class_data in obj_class_dict.items():
-        class_ = class_data['class_']
-        results[class_] = obj_bboxs_dict[bbox_idx]
+        try:
+            class_ = class_data['class_']
+            results[class_] = obj_bboxs_dict[bbox_idx]
+        except KeyError:
+            continue
+
 
     ic(results)
     draw(color_img, results)
