@@ -435,7 +435,6 @@ def draw(img, results_dict):
 	'''
 	img2 = img.copy()
 	# pick a N distinct labels based on number of objects
-	ic(results_dict)
 	for label, bbox in results_dict.items():
 			cv2.rectangle(img2, ic(tuple(bbox[0].astype(int))), tuple(bbox[1].astype(int)), (255, 0, 0), 2)
 			cv2.putText(img2, label, (int(bbox[0][0]), int(bbox[1][1])+13), 0, 0.5, (255,0,0))
@@ -489,6 +488,8 @@ def algorithm_run(png_path):
 	transparent_test_image[thresh == 255] = 0
 
 	final_bboxes_dict = template_match(transparent_test_image, N, templates)
+
+	ic(final_bboxes_dict)
 
 	if config.getboolean('ShowResults'):
 		draw(test_image, final_bboxes_dict)

@@ -10,7 +10,7 @@ config = cfgp.ConfigParser()
 config.read(os.path.join(os.path.dirname(__file__), '../settings.INI'))
 config = config['TASK1']
 
-def check_acute_seperation(edge_map, unique_lines):
+def check_acute_seperation(acute_angle, edge_map, unique_lines):
     '''
     Checks seperation between edges to find whether acute or obtuse seperation.
     Finds direction vector of each edge using the intersecting point and computes the dot product to find the angle between the edges.
