@@ -285,8 +285,11 @@ def run(img_path, templates_dict):
 
     results = {}
     for bbox_idx, class_data in obj_class_dict.items():
-        class_ = class_data['class_']
-        results[class_] = obj_bboxs_dict[bbox_idx]
+        try:
+            class_ = class_data['class_']
+            results[class_] = obj_bboxs_dict[bbox_idx]
+        except KeyError:
+            continue
 
     if cfg.get('ShowResults'):
         ic(results)

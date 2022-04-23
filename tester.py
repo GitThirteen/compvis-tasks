@@ -1,5 +1,6 @@
 import sys
 import os
+import time
 import numpy as np
 from src.util import Algorithm, config, sort_ascending, parse_annotation_txt_files
 from src.task_1 import algorithm as find_angle
@@ -58,9 +59,6 @@ class Tester:
         self.img_path = os.path.join(os.path.dirname(__file__), self.config.get('ImgDataPath'))
         self.annotations_path = os.path.join(os.path.dirname(__file__), self.config.get('ListPath'))
 
-        passes = 0
-        fails = 0
-
         images = {}
         with open(self.annotations_path) as f:
             lines = f.readlines()
@@ -68,7 +66,12 @@ class Tester:
                 frags = line.split(',')
                 images[frags[0]] = frags[1]
 
+        passes = 0
+        fails = 0
+
+        start_time = time.time()
         for name, angle in images.items():
+            indiv_start_time = time.time()
             path = self.img_path + '/' + name
             theta = find_angle.run(path)
 
@@ -79,13 +82,17 @@ class Tester:
             print(f'Expected angle: {angle}°')
             print(f'Found angle: {theta}°')
             if angle == theta:
-                print('TEST PASSED\n')
+                print('TEST PASSED')
                 passes += 1
             else:
-                print('TEST FAILED\n')
+                print('TEST FAILED')
                 fails += 1
 
-        print(f'PASSES: {passes} | FAILS: {fails}')
+            indiv_end_time = round(time.time() - indiv_start_time, 3)
+            print(f'RUNTIME: {indiv_end_time}s\n')
+
+        end_time = round(time.time() - start_time, 3)
+        print(f'PASSES: {passes} | FAILS: {fails} | RUNTIME: {end_time}s')
         return passes == len(images)
 
     def __test_2_3(self, opt) -> bool:
@@ -111,7 +118,9 @@ class Tester:
         passes = 0
         fails = 0
 
+        start_time = time.time()
         for i, img_path in enumerate(test_img_paths):
+            indiv_start_time = time.time()
             results_dict = sift.run(img_path, templates) if is_sift else template_match.run(img_path, templates)
             labels_dict = label_annotations[i]
 
@@ -136,6 +145,14 @@ class Tester:
                 print(f'[ERROR] img_f: {img_path} failed, not all classes match')
                 fails += 1
 
+            invid_end_time = round(time.time() - indiv_start_time)
+            print(f'RUNTIME: {invid_end_time}s\n')
+
+        end_time = round(time.time() - start_time, 3)
+        if end_time > 60:
+            print(f'RUNTIME: {int(end_time/60)}mins {round(end_time%60, 3)}s')
+        else:
+            print(f'RUNTIME: {end_time}s')
         return passes == len(test_img_paths)
 
 
