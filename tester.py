@@ -150,9 +150,11 @@ class Tester:
 
         end_time = round(time.time() - start_time, 3)
         if end_time > 60:
-            print(f'RUNTIME: {int(end_time/60)}mins {round(end_time%60, 3)}s')
+            end_time_str = f'RUNTIME: {int(end_time/60)}mins {round(end_time%60, 3)}s'
         else:
-            print(f'RUNTIME: {end_time}s')
+            end_time_str = f'RUNTIME: {end_time}s'
+
+        print(f'PASSES: {passes} | FAILS: {fails} | RUNTIME: {end_time_str}s')
         return passes == len(test_img_paths)
 
 
