@@ -15,13 +15,13 @@ class Algorithm(Enum):
 
 
 def config(test_option) -> cfgp.SectionProxy:
-    config = cfgp.ConfigParser()
-    config.read(os.path.join(os.path.dirname(__file__), 'settings.INI'))
+    cfg = cfgp.ConfigParser()
+    cfg.read(os.path.join(os.path.dirname(__file__), 'settings.INI'))
 
     if test_option == Algorithm.FIND_ANGLE:
-        return config['TASK1']
+        return cfg['TASK1']
     else:
-        return config['TASK2_3']
+        return cfg['TASK2_3']
 
 
 def sort_ascending(list) -> list:

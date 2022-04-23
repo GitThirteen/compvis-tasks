@@ -290,7 +290,7 @@ def run(img_path, templates_dict):
         except KeyError:
             continue
 
-    if cfg.getBoolean('ShowResults'):
+    if cfg.getboolean('ShowResults'):
         ic(results)
         draw(color_img, results)
 
