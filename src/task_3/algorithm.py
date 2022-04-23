@@ -4,7 +4,6 @@ import cv2
 import sys
 import matplotlib.pyplot as plt
 import numpy as np
-
 from icecream import ic
 from skimage.measure import ransac
 from skimage.transform import ProjectiveTransform, AffineTransform
