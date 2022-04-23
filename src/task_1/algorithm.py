@@ -4,11 +4,10 @@ import argparse
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
-import configparser as cfgp
 
-config = cfgp.ConfigParser()
-config.read(os.path.join(os.path.dirname(__file__), '../settings.INI'))
-config = config['TASK1']
+from ..util import config, Algorithm
+
+cfg = config(Algorithm.FIND_ANGLE)
 
 def check_acute_seperation(edge_map, unique_lines):
     '''
@@ -43,7 +42,7 @@ def check_acute_seperation(edge_map, unique_lines):
     y_int = m1 * x_int + c1
     intersection_point = np.asarray([y_int, x_int])  # y=i, x=j, flipped for array indexing
 
-    if config.getboolean('ShowDebug'):
+    if cfg.getboolean('ShowDebug'):
         print('intersection point:', intersection_point)
 
     # find distance of edge pixels from intersection point
@@ -67,7 +66,7 @@ def check_acute_seperation(edge_map, unique_lines):
     threshold_dist_frm_int_array = np.sum(threshold_pos_frm_int_array ** 2, 1) ** 0.5
     edge_point_2_idx = np.argmax(threshold_dist_frm_int_array)
 
-    if config.getboolean('ShowDebug'):
+    if cfg.getboolean('ShowDebug'):
         print(f'edge point 1:{pos_array[edge_point_1_idx]}\n')
         print(f'edge point 2:{pos_array[edge_point_2_idx]}\n')
 
@@ -78,13 +77,13 @@ def check_acute_seperation(edge_map, unique_lines):
     edge_unit_vec_1 = edge_vec_1 / np.linalg.norm(edge_vec_1)
     edge_unit_vec_2 = edge_vec_2 / np.linalg.norm(edge_vec_2)
 
-    if config.getboolean('ShowDebug'):
+    if cfg.getboolean('ShowDebug'):
         print(f'edge unit vec 1: {edge_unit_vec_1}, edge unit vec 2: {edge_unit_vec_2}')
 
     # TODO: Clipping doesn't change result atm, not sure if it's needed after we fix edge points?
     angle = np.arccos(np.clip(np.dot(edge_unit_vec_1, edge_unit_vec_2), -1.0, 1.0))
 
-    if config.getboolean('ShowDebug'):
+    if cfg.getboolean('ShowDebug'):
         print(angle)
         print(np.pi / 2)
         print('angle from arcos:', angle * 180 / np.pi)
@@ -93,7 +92,7 @@ def check_acute_seperation(edge_map, unique_lines):
     return acute_bool
 
 
-def find_angle(png_path):
+def run(png_path):
     '''
     Reads a png with opencv, runs canny edge detection and applies a hough transform to extract lines
     Checks if acute or obtuse seperation and returns the appropriate angle.
@@ -150,13 +149,13 @@ def find_angle(png_path):
         if len(unique_lines) == 2:
             break
 
-    if config.getboolean('ShowHough'):
+    if cfg.getboolean('ShowHough'):
         draw_houghlines(lines, img)
 
     # check for vertical lines:
     if len(np.nonzero(unique_lines[:, 1])[0]) < len(unique_lines):
         # rotate edges by 90 to turn vertical line to horizontal
-        if config.getboolean('ShowDebug'):
+        if cfg.getboolean('ShowDebug'):
             print('Vertical lines in image, rotating to avoid inf gradients')
 
         h, w = edges.shape
@@ -174,7 +173,7 @@ def find_angle(png_path):
         # extract rho theta values for each line
         rho, theta = line
         if vert_bool: theta -= np.pi / 2
-        if config.getboolean('ShowDebug'):
+        if cfg.getboolean('ShowDebug'):
             print('line polar params (rho,theta):', rho, theta)
 
         # calc line cartesian params
@@ -186,7 +185,7 @@ def find_angle(png_path):
         c = y0 - m * x0
 
         if vert_bool: c += offset
-        if config.getboolean('ShowDebug'):
+        if cfg.getboolean('ShowDebug'):
             print('line cartesian params (m,c):', m, c)
 
         # append param tuple to list
@@ -199,7 +198,7 @@ def find_angle(png_path):
         m2, c2 = unique_cartesian_lines[1]
 
         # show lines and edges
-        if config.getboolean('ShowDebug'):
+        if cfg.getboolean('ShowDebug'):
             x = np.arange(0, edges.shape[1], 1)
             plt.imshow(edges)
             plt.scatter(x, m1 * x + c1, s=0.5)
@@ -214,7 +213,7 @@ def find_angle(png_path):
         acute_angle = np.pi - angle if angle > np.pi / 2 else angle
 
         # check if acute seperation true
-        acute_bool = check_acute_seperation(acute_angle, edges, unique_cartesian_lines)
+        acute_bool = check_acute_seperation(edges, unique_cartesian_lines)
 
         # return angle in degrees
         if acute_bool:
@@ -265,8 +264,8 @@ def main():
     parser.add_argument("png_path", help="Path to a png image containing lines")
     args = parser.parse_args()
 
-    theta = find_angle(args.png_path)
-    if config.getboolean('ShowDebug'):
+    theta = run(args.png_path)
+    if cfg.getboolean('ShowDebug'):
         print(f'angle found:{theta:.3f}')
 
 
