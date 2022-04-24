@@ -134,16 +134,10 @@ def get_bbox_dims(img):
     kernel = np.ones((15, 15), np.uint8)
     binary = cv2.morphologyEx(binary, cv2.MORPH_CLOSE, kernel)
 
-<<<<<<< HEAD
     # set boundaries with 0 so images are disconnected from the edge
     h, w = binary.shape
     PAD = 5
 
-=======
-     # set pad boundaries with 0 so images disconnected from edge
-    h,w= binary.shape
-    PAD=5
->>>>>>> b57ae33182b4843dc91b64b5db1f3108e26262f8
     binary[:,0:PAD] = np.zeros((h,PAD))
     binary[:,w-PAD:w] = np.zeros((h,PAD))
     binary[0:PAD,:]= np.zeros((PAD,w))
