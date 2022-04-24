@@ -166,11 +166,12 @@ class Tester:
 
         end_time = round(time.time() - start_time, 3)
         if end_time > 60:
-            print(f'RUNTIME: {int(end_time/60)}mins {round(end_time%60, 3)}s')
-            data.append([f'TOTAL RUNTIME: {int(end_time/60)}mins {round(end_time%60, 3)}s'])
+            runtime_str = f'TOTAL RUNTIME: {int(end_time/60)}mins {round(end_time%60, 3)}s'
         else:
-            print(f'RUNTIME: {end_time}s')
-            data.append([f'TOTAL RUNTIME: {end_time}s'])
+            runtime_str = f'RUNTIME: {end_time}s'
+        print(runtime_str)
+        data.append([runtime_str])
+
         with open('run_data.csv', 'a', encoding='UTF8', newline='') as f:
             writer = csv.writer(f)
 
