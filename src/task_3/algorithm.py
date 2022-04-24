@@ -128,6 +128,15 @@ def get_bbox_dims(img):
     # apply morh closing to close any disconnected parts
     kernel = np.ones((15, 15), np.uint8)
     binary = cv2.morphologyEx(binary, cv2.MORPH_CLOSE, kernel)
+
+     # set pad boundaries with 0 so images disconnected from edge
+    h,w= binary.shape
+    PAD=5
+    binary[:,0:PAD] = np.zeros((h,PAD))
+    binary[:,w-PAD:w] = np.zeros((h,PAD))
+    binary[0:PAD,:]= np.zeros((PAD,w))
+    binary[h-PAD:h,:] = np.zeros((PAD,w))
+
     contours, _ = cv2.findContours(~binary, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
     idx = 0
