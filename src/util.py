@@ -62,7 +62,7 @@ class Logger:
 
     def measure_time_diff(self, name=''):
         if self.cfg.getboolean('DebugMode'):
-            print(f"[{name}] " + str(round(time.time() - self.time, 3)))
+            print(f"[TIMER: {name}] " + str(round(time.time() - self.time, 3)))
             self.time = time.time()
 
     @staticmethod

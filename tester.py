@@ -1,6 +1,7 @@
 import sys
 import os
 import time
+import csv
 import numpy as np
 from src.util import Algorithm, Logger, config, sort_ascending, parse_annotation_txt_files
 from src.task_1 import algorithm as find_angle
@@ -122,14 +123,30 @@ class Tester:
         passes = 0
         fails = 0
 
+        # UNCOMMENT FOR MORE PRECISE DATA
+        # header = ['Image', 'Runtime', 'SUCCESS/FAIL', 'False Positive Rate', 'True Positive Rate', 'Accuracy']
+        # data = []
         start_time = time.time()
         for i, img_path in enumerate(test_img_paths):
+            # UNCOMMENT FOR MORE PRECISE DATA
+            # success = "FAIL"
             indiv_start_time = time.time()
             results_dict = sift.run(img_path, templates) if is_sift else template_match.run(img_path, templates)
             labels_dict = label_annotations[i]
 
             class_labels = set(labels_dict.keys())
             class_segmented = set(results_dict.keys())
+
+            # UNCOMMENT FOR MORE PRECISE DATA
+            # negatives = len(templates)-len(class_labels)
+            # true_positives = len([class_ for class_ in class_segmented if class_ in class_labels])
+            # false_positives = len([class_ for class_ in class_segmented if class_ not in class_labels])
+            # false_negatives = len([class_ for class_ in class_labels if class_ not in class_segmented])
+            # true_negatives = negatives - false_negatives - false_positives
+
+            # false_positive_rate = false_positives/negatives
+            # true_positive_rate = true_positives/len(class_labels)
+            # accuracy = ((true_positives+true_negatives)/(true_positives+true_negatives+false_positives+false_negatives))*100
 
             if class_labels == class_segmented:
                 for class_ in class_labels:
@@ -149,8 +166,12 @@ class Tester:
                 LOGGER.ERROR(f'img_f: {img_path} failed, not all classes match')
                 fails += 1
 
-            invid_end_time = round(time.time() - indiv_start_time)
+            invid_end_time = round(time.time() - indiv_start_time, 3)
             LOGGER.INFO(f'RUNTIME: {invid_end_time}s\n')
+
+            # UNCOMMENT FOR MORE PRECISE DATA
+            # LOGGER.INFO(f'TPR: {round(true_positive_rate*100, 2)}% | FPR: {round(false_positive_rate*100, 2)}% | Accuracy: {round(accuracy, 2)}%\n')
+            # data.append([f'Image {i+1}', f'{invid_end_time}s', success, f'{round(false_positive_rate*100, 2)}%', f'{round(true_positive_rate*100, 2)}%', f'{round(accuracy, 2)}%'])
 
         end_time = round(time.time() - start_time, 3)
         if end_time > 60:
@@ -159,6 +180,21 @@ class Tester:
             final_runtime = f'{end_time}s'
 
         LOGGER.INFO(f'PASSES: {passes} | FAILS: {fails} | RUNTIME: {final_runtime}')
+
+        # UNCOMMENT FOR MORE PRECISE DATA
+        # data.append([final_runtime])
+        #
+        # with open('run_data.csv', 'a', encoding='UTF8', newline='') as f:
+        #     writer = csv.writer(f)
+        #
+        #     if opt == Algorithm.TEMPLATE_MATCHING:
+        #         writer.writerow(["Task 2"])
+        #     else:
+        #         writer.writerow(["Task 3"])
+        #     # write the header
+        #     writer.writerow(header)
+        #     # write multiple rows
+        #     writer.writerows(data)
         return passes == len(test_img_paths)
 
 
