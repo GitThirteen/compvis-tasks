@@ -112,9 +112,13 @@ class Tester:
         training_data_path = self.config.get('TrainingDataPath')
         if is_sift:
             templates = sift.read_template_dir(training_data_path)
+            # UNCOMMENT FOR MORE PRECISE DATA
+            # num_templates = len(templates)
             templates = sift.get_template_kp_des(templates)
         else:
             templates = template_match.generate_pyramids(training_data_path)
+            # UNCOMMENT FOR MORE PRECISE DATA
+            # num_templates = len(templates)
 
         self.img_path = self.config.get('TestImgDataPath')
         test_img_paths = [os.path.join(self.img_path, f) for f in os.listdir(self.img_path) if f.endswith('.png')]
@@ -138,12 +142,12 @@ class Tester:
             class_segmented = set(results_dict.keys())
 
             # UNCOMMENT FOR MORE PRECISE DATA
-            # negatives = len(templates)-len(class_labels)
+            # negatives = num_templates-len(class_labels)
             # true_positives = len([class_ for class_ in class_segmented if class_ in class_labels])
             # false_positives = len([class_ for class_ in class_segmented if class_ not in class_labels])
             # false_negatives = len([class_ for class_ in class_labels if class_ not in class_segmented])
             # true_negatives = negatives - false_negatives - false_positives
-
+            #
             # false_positive_rate = false_positives/negatives
             # true_positive_rate = true_positives/len(class_labels)
             # accuracy = ((true_positives+true_negatives)/(true_positives+true_negatives+false_positives+false_negatives))*100
@@ -182,7 +186,7 @@ class Tester:
         LOGGER.INFO(f'PASSES: {passes} | FAILS: {fails} | RUNTIME: {final_runtime}')
 
         # UNCOMMENT FOR MORE PRECISE DATA
-        # data.append([final_runtime])
+        # data.append([f'TOTAL RUNTIME: {final_runtime}'])
         #
         # with open('run_data.csv', 'a', encoding='UTF8', newline='') as f:
         #     writer = csv.writer(f)
