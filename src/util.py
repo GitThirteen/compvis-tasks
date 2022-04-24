@@ -1,7 +1,9 @@
 import os
 import cv2
 import re
+import time
 from enum import Enum
+from icecream import ic
 import configparser as cfgp
 import matplotlib.pyplot as plt
 import numpy as np
@@ -12,6 +14,66 @@ class Algorithm(Enum):
     TEMPLATE_MATCHING = 2
     SIFT = 3
     ALL = 4
+
+
+class bcolors:
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+
+
+class Logger:
+    __instance = None
+
+    def __init__(self, cfg):
+        self.cfg = cfg
+    
+    def ERROR(self, content):
+        if self.cfg.getboolean('ShowError'):
+            print(f'{bcolors.FAIL}{bcolors.BOLD}[ERROR]{bcolors.ENDC} {content}')
+
+    def WARNING(self, content):
+        if self.cfg.getboolean('ShowWarning'):
+            print(f'{bcolors.WARNING}{bcolors.BOLD}[WARNING]{bcolors.ENDC} {content}')
+
+    def INFO(self, content):
+        if self.cfg.getboolean('ShowInfo'):
+            print(f'{bcolors.OKCYAN}{bcolors.BOLD}[INFO]{bcolors.ENDC} {content}')
+
+    def SUCCESS(self, content):
+        if self.cfg.getboolean('ShowSuccess'):
+            print(f'{bcolors.OKGREEN}{bcolors.BOLD}[SUCCESS]{bcolors.ENDC} {content}')
+
+    def DEBUG(self, content):
+        if self.cfg.getboolean('DebugMode'):
+            print(f'{bcolors.BOLD}[DEBUG]{bcolors.ENDC} {content}')
+
+    def DEBUG_IC(self, *args):
+        if self.cfg.getboolean('DebugMode'):
+            ic(args)
+
+    def start_timer(self):
+        if self.cfg.getboolean('DebugMode'):
+            self.time = time.time()
+
+    def measure_time_diff(self, name=''):
+        if self.cfg.getboolean('DebugMode'):
+            print(f"[{name}] " + str(round(time.time() - self.time, 3)))
+            self.time = time.time()
+
+    @staticmethod
+    def get() -> 'Logger':
+        if Logger.__instance == None:
+            cfg = cfgp.ConfigParser()
+            cfg.read(os.path.join(os.path.dirname(__file__), 'settings.INI'))
+            cfg = cfg['LOGGER_OPTIONS']
+            Logger.__instance = Logger(cfg)
+
+        return Logger.__instance
 
 
 def config(test_option) -> cfgp.SectionProxy:

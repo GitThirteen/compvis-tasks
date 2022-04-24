@@ -5,9 +5,10 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt
 
-from ..util import config, Algorithm
+from ..util import config, Algorithm, Logger
 
 cfg = config(Algorithm.FIND_ANGLE)
+LOGGER = Logger.get()
 
 def check_acute_seperation(edge_map, unique_lines):
     '''
@@ -42,8 +43,7 @@ def check_acute_seperation(edge_map, unique_lines):
     y_int = m1 * x_int + c1
     intersection_point = np.asarray([y_int, x_int])  # y=i, x=j, flipped for array indexing
 
-    if cfg.getboolean('ShowDebug'):
-        print('intersection point:', intersection_point)
+    LOGGER.DEBUG(f'intersection point: {intersection_point}')
 
     # find distance of edge pixels from intersection point
     pos_frm_int_array = pos_array - intersection_point  # find difference in i,j indices
@@ -66,9 +66,8 @@ def check_acute_seperation(edge_map, unique_lines):
     threshold_dist_frm_int_array = np.sum(threshold_pos_frm_int_array ** 2, 1) ** 0.5
     edge_point_2_idx = np.argmax(threshold_dist_frm_int_array)
 
-    if cfg.getboolean('ShowDebug'):
-        print(f'edge point 1:{pos_array[edge_point_1_idx]}\n')
-        print(f'edge point 2:{pos_array[edge_point_2_idx]}\n')
+    LOGGER.DEBUG(f'edge point 1:{pos_array[edge_point_1_idx]}')
+    LOGGER.DEBUG(f'edge point 2:{pos_array[edge_point_2_idx]}')
 
     # find unit vectors corresponding to direction of edge points
     edge_vec_1 = pos_frm_int_array[edge_point_1_idx]
@@ -77,16 +76,14 @@ def check_acute_seperation(edge_map, unique_lines):
     edge_unit_vec_1 = edge_vec_1 / np.linalg.norm(edge_vec_1)
     edge_unit_vec_2 = edge_vec_2 / np.linalg.norm(edge_vec_2)
 
-    if cfg.getboolean('ShowDebug'):
-        print(f'edge unit vec 1: {edge_unit_vec_1}, edge unit vec 2: {edge_unit_vec_2}')
+    LOGGER.DEBUG(f'edge unit vec 1: {edge_unit_vec_1}, edge unit vec 2: {edge_unit_vec_2}')
 
     # TODO: Clipping doesn't change result atm, not sure if it's needed after we fix edge points?
     angle = np.arccos(np.clip(np.dot(edge_unit_vec_1, edge_unit_vec_2), -1.0, 1.0))
 
-    if cfg.getboolean('ShowDebug'):
-        print(angle)
-        print(np.pi / 2)
-        print('angle from arcos:', angle * 180 / np.pi)
+    LOGGER.DEBUG(angle)
+    LOGGER.DEBUG(np.pi / 2)
+    LOGGER.DEBUG(f'angle from arcos: {angle * 180 / np.pi}')
 
     acute_bool = angle <= np.pi / 2
     return acute_bool
@@ -149,14 +146,13 @@ def run(png_path):
         if len(unique_lines) == 2:
             break
 
-    if cfg.getboolean('ShowHough'):
+    if cfg.getboolean('ShowHoughLines'):
         draw_houghlines(lines, img)
 
     # check for vertical lines:
     if len(np.nonzero(unique_lines[:, 1])[0]) < len(unique_lines):
         # rotate edges by 90 to turn vertical line to horizontal
-        if cfg.getboolean('ShowDebug'):
-            print('Vertical lines in image, rotating to avoid inf gradients')
+        LOGGER.INFO('Vertical lines in image, rotating to avoid inf gradients')
 
         h, w = edges.shape
         offset = w
@@ -173,8 +169,7 @@ def run(png_path):
         # extract rho theta values for each line
         rho, theta = line
         if vert_bool: theta -= np.pi / 2
-        if cfg.getboolean('ShowDebug'):
-            print('line polar params (rho,theta):', rho, theta)
+        LOGGER.DEBUG(f'line polar params (rho,theta): {rho}, {theta}')
 
         # calc line cartesian params
         cosx = np.cos(theta)
@@ -185,8 +180,7 @@ def run(png_path):
         c = y0 - m * x0
 
         if vert_bool: c += offset
-        if cfg.getboolean('ShowDebug'):
-            print('line cartesian params (m,c):', m, c)
+        LOGGER.DEBUG(f'line cartesian params (m,c): {m}, {c}')
 
         # append param tuple to list
         unique_cartesian_lines.append((m, c))
@@ -198,7 +192,7 @@ def run(png_path):
         m2, c2 = unique_cartesian_lines[1]
 
         # show lines and edges
-        if cfg.getboolean('ShowDebug'):
+        if cfg.getboolean('ShowHoughLines'):
             x = np.arange(0, edges.shape[1], 1)
             plt.imshow(edges)
             plt.scatter(x, m1 * x + c1, s=0.5)
@@ -222,7 +216,7 @@ def run(png_path):
             return 180 / np.pi * (np.pi - acute_angle)
 
     else:
-        print('[ERROR] More than 2 lines found')
+        LOGGER.ERROR('MORE THAN 2 LINES FOUND. ABORTING.')
         return sys.exit(1)
 
 
@@ -265,8 +259,7 @@ def main():
     args = parser.parse_args()
 
     theta = run(args.png_path)
-    if cfg.getboolean('ShowDebug'):
-        print(f'angle found:{theta:.3f}')
+    LOGGER.DEBUG(f'angle found:{theta:.3f}')
 
 
 if __name__ == "__main__":

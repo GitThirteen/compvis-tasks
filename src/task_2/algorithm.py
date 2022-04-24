@@ -3,13 +3,12 @@ import os
 import sys
 import argparse
 import re
-from cv2 import rotate
 import numpy as np
-from ..util import draw_gaussian_pyramid, get_images, config, Algorithm
+from ..util import draw_gaussian_pyramid, get_images, config, Algorithm, Logger
 from icecream import ic
 
 cfg = config(Algorithm.TEMPLATE_MATCHING)
-
+LOGGER = Logger.get()
 
 def create_gaussian_pyramid(image, rotations, scale_levels):
     """
@@ -212,7 +211,7 @@ def extract_templates_from_pyramid(pyramid, bboxes, option='closest'):
         diag = np.sqrt(bbox[0] ** 2 + bbox[1] ** 2)
         if option not in funcs:
             # In case an invalid option was specified
-            print(f'[ERROR] Option {option} does not exist.')
+            LOGGER.ERROR(f'Option {option} does not exist.')
             sys.exit(1)
 
         funcs[option]()
@@ -489,7 +488,7 @@ def generate_pyramids(training_data_path):
     scale = cfg.getint('ScaleLevels')
 
     # Generates a pyramid for all templates
-    pyramids = []
+    pyramids = [ ]
 
     for template in templates:
         pyramid = create_gaussian_pyramid(template, rots, scale)
