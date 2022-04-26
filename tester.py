@@ -80,14 +80,14 @@ class Tester:
             angle = round(float(angle))
             theta = round(float(theta))
 
-            print(name)
-            print(f'Expected angle: {angle}°')
-            print(f'Found angle: {theta}°')
+            LOGGER.INFO(name)
+            LOGGER.INFO(f'Expected angle: {angle}°')
+            LOGGER.INFO(f'Found angle: {theta}°')
             if angle == theta:
-                print('TEST PASSED')
+                LOGGER.SUCCESS('TEST PASSED')
                 passes += 1
             else:
-                print('TEST FAILED')
+                LOGGER.ERROR('TEST FAILED')
                 fails += 1
 
             indiv_end_time = round(time.time() - indiv_start_time, 3)
@@ -103,7 +103,6 @@ class Tester:
             return False
 
         self.config = config(Algorithm.SIFT)
-
         is_sift = (opt == Algorithm.SIFT)
 
         self.annotations_path = self.config.get('AnnotationsPath')
@@ -112,13 +111,9 @@ class Tester:
         training_data_path = self.config.get('TrainingDataPath')
         if is_sift:
             templates = sift.read_template_dir(training_data_path)
-            # UNCOMMENT FOR MORE PRECISE DATA
-            # num_templates = len(templates)
             templates = sift.get_template_kp_des(templates)
         else:
             templates = template_match.generate_pyramids(training_data_path)
-            # UNCOMMENT FOR MORE PRECISE DATA
-            # num_templates = len(templates)
 
         self.img_path = self.config.get('TestImgDataPath')
         test_img_paths = [os.path.join(self.img_path, f) for f in os.listdir(self.img_path) if f.endswith('.png')]
@@ -127,13 +122,13 @@ class Tester:
         passes = 0
         fails = 0
 
-        # UNCOMMENT FOR MORE PRECISE DATA
-        # header = ['Image', 'Runtime', 'SUCCESS/FAIL', 'False Positive Rate', 'True Positive Rate', 'Accuracy']
-        # data = []
+        if self.config.getboolean('PreciseData'):
+            num_templates = len(templates)
+            header = ['Image', 'Runtime', 'SUCCESS/FAIL', 'False Positive Rate', 'True Positive Rate', 'Accuracy']
+            data = []
+
         start_time = time.time()
         for i, img_path in enumerate(test_img_paths):
-            # UNCOMMENT FOR MORE PRECISE DATA
-            # success = "FAIL"
             indiv_start_time = time.time()
             results_dict = sift.run(img_path, templates) if is_sift else template_match.run(img_path, templates)
             labels_dict = label_annotations[i]
@@ -141,16 +136,18 @@ class Tester:
             class_labels = set(labels_dict.keys())
             class_segmented = set(results_dict.keys())
 
-            # UNCOMMENT FOR MORE PRECISE DATA
-            # negatives = num_templates-len(class_labels)
-            # true_positives = len([class_ for class_ in class_segmented if class_ in class_labels])
-            # false_positives = len([class_ for class_ in class_segmented if class_ not in class_labels])
-            # false_negatives = len([class_ for class_ in class_labels if class_ not in class_segmented])
-            # true_negatives = negatives - false_negatives - false_positives
-            #
-            # false_positive_rate = false_positives/negatives
-            # true_positive_rate = true_positives/len(class_labels)
-            # accuracy = ((true_positives+true_negatives)/(true_positives+true_negatives+false_positives+false_negatives))*100
+            if self.config.getboolean('PreciseData'):
+                success = "FAIL"
+
+                negatives = num_templates-len(class_labels)
+                true_positives = len([class_ for class_ in class_segmented if class_ in class_labels])
+                false_positives = len([class_ for class_ in class_segmented if class_ not in class_labels])
+                false_negatives = len([class_ for class_ in class_labels if class_ not in class_segmented])
+                true_negatives = negatives - false_negatives - false_positives
+            
+                false_positive_rate = false_positives/negatives
+                true_positive_rate = true_positives/len(class_labels)
+                accuracy = ((true_positives+true_negatives)/(true_positives+true_negatives+false_positives+false_negatives))*100
 
             if class_labels == class_segmented:
                 for class_ in class_labels:
@@ -173,9 +170,9 @@ class Tester:
             invid_end_time = round(time.time() - indiv_start_time, 3)
             LOGGER.INFO(f'RUNTIME: {invid_end_time}s\n')
 
-            # UNCOMMENT FOR MORE PRECISE DATA
-            # LOGGER.INFO(f'TPR: {round(true_positive_rate*100, 2)}% | FPR: {round(false_positive_rate*100, 2)}% | Accuracy: {round(accuracy, 2)}%\n')
-            # data.append([f'Image {i+1}', f'{invid_end_time}s', success, f'{round(false_positive_rate*100, 2)}%', f'{round(true_positive_rate*100, 2)}%', f'{round(accuracy, 2)}%'])
+            if self.config.getboolean('PreciseData'):
+                LOGGER.INFO(f'TPR: {round(true_positive_rate*100, 2)}% | FPR: {round(false_positive_rate*100, 2)}% | Accuracy: {round(accuracy, 2)}%\n')
+                data.append([f'Image {i+1}', f'{invid_end_time}s', success, f'{round(false_positive_rate*100, 2)}%', f'{round(true_positive_rate*100, 2)}%', f'{round(accuracy, 2)}%'])
 
         end_time = round(time.time() - start_time, 3)
         if end_time > 60:
@@ -185,20 +182,18 @@ class Tester:
 
         LOGGER.INFO(f'PASSES: {passes} | FAILS: {fails} | RUNTIME: {final_runtime}')
 
-        # UNCOMMENT FOR MORE PRECISE DATA
-        # data.append([f'TOTAL RUNTIME: {final_runtime}'])
-        #
-        # with open('run_data.csv', 'a', encoding='UTF8', newline='') as f:
-        #     writer = csv.writer(f)
-        #
-        #     if opt == Algorithm.TEMPLATE_MATCHING:
-        #         writer.writerow(["Task 2"])
-        #     else:
-        #         writer.writerow(["Task 3"])
-        #     # write the header
-        #     writer.writerow(header)
-        #     # write multiple rows
-        #     writer.writerows(data)
+        if self.config.getboolean('PreciseData'):
+            data.append([f'TOTAL RUNTIME: {final_runtime}'])
+
+            with open('run_data.csv', 'a', encoding='UTF8', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow(['Task 3' if opt == Algorithm.SIFT else 'Task 2'])
+
+                # write the header
+                writer.writerow(header)
+                # write multiple rows
+                writer.writerows(data)
+
         return passes == len(test_img_paths)
 
 
