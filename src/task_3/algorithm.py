@@ -4,10 +4,11 @@ import cv2
 import sys
 import matplotlib.pyplot as plt
 import numpy as np
+from icecream import ic
 from skimage.measure import ransac
-from skimage.transform import AffineTransform
+from skimage.transform import ProjectiveTransform, AffineTransform
 
-from ..util import Algorithm, Logger, config
+from ..util import config, Algorithm, Logger, get_bbox_dims
 
 cfg = config(Algorithm.SIFT)
 LOGGER = Logger.get()
@@ -43,7 +44,7 @@ def find_bbox_idx(src_pts, obj_bboxs_dict):
                 bbox_bins[idx] += 1
 
                 LOGGER.DEBUG_IC(idx, x, y, bbox)
-    
+
     main_bbox_idx = np.argmax(bbox_bins)
     num_matched_pts = bbox_bins[main_bbox_idx]
     return main_bbox_idx, num_matched_pts
@@ -103,81 +104,19 @@ def get_template_kp_des(templates_dict):
 
     return templates_dict_kp_des
 
-
-def get_bbox_dims(img):
-    """
-    Finds dimensions for bounding boxes in passed in image
-
-    Parameters
-    ----------
-    img : np.ndarray
-        return value of cv2.imread(img_path), a 3d numpy array
-
-    Returns
-    -------
-    dims_list: list
-        list containing width and height of each bbox in image as tuples [(width, height), ....]
-    """
-    dims_dict = {}
-    new = img.copy()
-
-    # Blur the image
-    new = cv2.GaussianBlur(new, (3, 3), 3)
-
-    _, new_thresh = cv2.threshold(new, 245, 255, cv2.THRESH_BINARY)
-    kernel = np.ones((6, 6), np.uint8)
-    new[new_thresh == 255] = 0
-    new = cv2.morphologyEx(new, cv2.MORPH_OPEN, kernel)
-
-    # apply an otsu thresh
-    _, binary = cv2.threshold(new, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-
-    # apply morph closing to close any disconnected parts
-    kernel = np.ones((10, 10), np.uint8)
-    binary = cv2.morphologyEx(binary, cv2.MORPH_CLOSE, kernel)
-
-    # set boundaries with 0 so images are disconnected from the edge
-    h, w = binary.shape
-    PAD = 5
-
-    binary[:,0:PAD] = np.zeros((h,PAD))
-    binary[:,w-PAD:w] = np.zeros((h,PAD))
-    binary[0:PAD,:]= np.zeros((PAD,w))
-    binary[h-PAD:h,:] = np.zeros((PAD,w))
-
-    contours, _ = cv2.findContours(~binary, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-
-    i = 0
-    for contour in contours:
-        x, y, w, h = cv2.boundingRect(contour)
-
-        LOGGER.DEBUG_IC(x, y, w, h, w)
-        
-        if 1000 < w * h < 5000:  # ignore the global image contour and any tiny contours
-            cv2.rectangle(new, (x, y), (x + w, y + h), (255, 0, 0), 5)
-            dims_dict[i] = (np.asarray([x, y]), np.asarray([x + w, y + h]))
-            i += 1
-
-    # uncomment to show detected bboxs
-    # ---------------------------------------------
-    # cv2.imshow('bboxs detected from raw image', binary)
-    # cv2.waitKey(0)
-    return dims_dict
-
-
 def sift_matching(img1, template, template_kp, template_des):
     # Input : image1, template in opencv format, and template key points and descriptors
     # Output : corresponding keypoints for source and target images
     # Output Format : Numpy matrix of shape: [No. of Correspondences X 2]
 
-    # LOGGER.start_timer()
+    LOGGER.start_timer()
 
     sift = cv2.SIFT_create(nOctaveLayers=10)
     # surf = cv2.xfeatures2d.SIFT_create()
 
     kp1, des1 = sift.detectAndCompute(img1, None)
 
-    # LOGGER.measure_time_diff('SIFTING')
+    LOGGER.measure_time_diff('SIFTING')
 
     FLANN_INDEX_KDTREE = 0
     index_params = dict(algorithm=FLANN_INDEX_KDTREE, trees=5)
@@ -188,7 +127,7 @@ def sift_matching(img1, template, template_kp, template_des):
     # bf = cv2.BFMatcher()
     # matches = bf.knnMatch(des1,des2,k=2)
 
-    # LOGGER.measure_time_diff('TREE')
+    LOGGER.measure_time_diff('TREE')
 
     # Lowe's Ratio test
     good = []
@@ -200,16 +139,14 @@ def sift_matching(img1, template, template_kp, template_des):
     dst_pts = np.float32([template_kp[m.trainIdx].pt for m in good]).reshape(-1, 2)
 
     LOGGER.DEBUG_IC(len(src_pts), len(dst_pts))
-    # LOGGER.measure_time_diff('RATIO TEST + SRC/DST')
-    
+    LOGGER.measure_time_diff('RATIO TEST + SRC/DST')
     # Ransac
     try:
         _, inliers = ransac((src_pts, dst_pts), AffineTransform, min_samples=4, residual_threshold=8, max_trials=100)
-        # LOGGER.measure_time_diff('RANSAC')
+        LOGGER.measure_time_diff('RANSAC')
     except ValueError:
         LOGGER.DEBUG('No matches')
         return 1
-    
     if inliers is not None:  # inliers found
         n_inliers = np.sum(inliers)
 
@@ -226,7 +163,7 @@ def sift_matching(img1, template, template_kp, template_des):
         src_pts = np.float32([inlier_keypoints_left[m.queryIdx].pt for m in placeholder_matches]).reshape(-1, 2)
         dst_pts = np.float32([inlier_keypoints_right[m.trainIdx].pt for m in placeholder_matches]).reshape(-1, 2)
 
-        # LOGGER.measure_time_diff('POST-RANSAC')
+        LOGGER.measure_time_diff('POST-RANSAC')
 
         return src_pts, dst_pts
     else:
@@ -256,7 +193,7 @@ def draw(img, results_dict):
     # pick a N distinct labels based on number of objects
     LOGGER.DEBUG_IC(results_dict)
     for label, bbox in results_dict.items():
-        cv2.rectangle(img2, tuple(bbox[0].astype(int)), tuple(bbox[1].astype(int)), (255, 0, 0), 2)
+        cv2.rectangle(img2, ic(tuple(bbox[0].astype(int))), tuple(bbox[1].astype(int)), (255, 0, 0), 2)
         cv2.putText(img2, label, (int(bbox[0][0]), int(bbox[1][1]) + 13), 0, 0.5, (255, 0, 0))
 
     cv2.imshow('test', img2)
@@ -270,9 +207,9 @@ def run(img_path, templates_dict_kp_des):
 
     # find unclassified bboxs in img
     # key = 1,2,3,...,N value = [np.ndarray(x,y),np.ndarray(x+w,y+h)]
-    obj_bboxs_dict = get_bbox_dims(img)
+    obj_bboxs_dict = get_bbox_dims(img, True)
     LOGGER.DEBUG_IC(obj_bboxs_dict)
-    
+
     # initialise empty dict to track pts matched with each class
     obj_class_dict = {idx: {} for idx in list(obj_bboxs_dict.keys())}
 
@@ -283,13 +220,13 @@ def run(img_path, templates_dict_kp_des):
         # try matching sift features
         try:
             template, kp, des = template_data['image'], template_data['key_points'], template_data['descriptors']
-            src_pts, _ = sift_matching(img, template, kp, des)
+            src_pts, dst_pts = sift_matching(img, template, kp, des)
 
             # find main class of object defined by src pts
             bbox_idx, num_matched_pts = find_bbox_idx(src_pts, obj_bboxs_dict)
 
             LOGGER.DEBUG_IC(bbox_idx, num_matched_pts)
-            
+
             # update class_bbox_dict
             if 'num_matches' in obj_class_dict[bbox_idx]:
                 # only update if num matches has increases
@@ -305,6 +242,8 @@ def run(img_path, templates_dict_kp_des):
             # no match for template
             pass
 
+        # plot_bboxs(img,class_bbox_dict)
+
     results = { }
     for bbox_idx, class_data in obj_class_dict.items():
         try:
@@ -314,6 +253,7 @@ def run(img_path, templates_dict_kp_des):
             continue
 
     if cfg.getboolean('ShowResults'):
+        ic(results)
         draw(color_img, results)
 
     return results
@@ -324,9 +264,9 @@ def main():
 
     training_data_path = cfg.get('TrainingDataPath')
     templates_dict = read_template_dir(training_data_path)
-    templates_kp_des = get_template_kp_des(templates_dict)
+    templates_dict_kp_des = get_template_kp_des(templates_dict)
 
-    run(img_path, templates_kp_des)
+    run(img_path, templates_dict_kp_des)
 
 
 if __name__ == "__main__":

@@ -31,7 +31,7 @@ class Logger:
 
     def __init__(self, cfg):
         self.cfg = cfg
-    
+
     def ERROR(self, content):
         if self.cfg.getboolean('ShowError'):
             print(f'{bcolors.FAIL}{bcolors.BOLD}[ERROR]{bcolors.ENDC} {content}')
@@ -184,3 +184,53 @@ def draw_gaussian_pyramid(pyramid, levels, rotations) -> None:
 
     plt.tight_layout()
     plt.show()
+
+def get_bbox_dims(img, sift=False):
+    """
+	Finds dimensions for bounding boxes in passed in image.
+
+	Parameters
+	----------
+	img : np.ndarray
+	 return value of cv2.imread(img_path), a 3d numpy array
+
+	Returns
+	-------
+	dims_list: list
+	 list containing width and height of each bbox in image as tuples [(width, height), ....]
+	"""
+    dims_dict = {}
+    dims_list = []
+    new = img.copy()
+
+    # Blur the image
+    blur = cv2.GaussianBlur(new, (11, 11), 3)
+    if sift:
+        grey = blur
+    else:
+        grey = cv2.cvtColor(blur, cv2.COLOR_BGR2GRAY)
+
+
+    # Convert the grayscale image to binary
+    ret, binary = cv2.threshold(grey, 250, 255, cv2.THRESH_BINARY)
+    contours, hierarchy = cv2.findContours(~binary, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+    i = 0
+    for contour in contours:
+        x, y, w, h = cv2.boundingRect(contour)
+        if (w * h) > 500:
+            dims = (w, h)
+            cv2.rectangle(new, (x, y), (x + w, y + h), (255, 0, 0), 5)
+            dims_dict[i] = (np.asarray([x, y]), np.asarray([x + w, y + h]))
+            dims_list.append(dims)
+            i += 1
+
+    # cv2.imshow('bboxs detected from raw image',new)
+    # cv2.waitKey(0)
+
+    # cv2.imshow('bboxs detected from raw image',new)
+    # cv2.waitKey(0)
+    if sift:
+        return dims_dict
+
+    return dims_list

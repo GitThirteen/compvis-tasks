@@ -4,7 +4,7 @@ import sys
 import argparse
 import re
 import numpy as np
-from ..util import draw_gaussian_pyramid, get_images, config, Algorithm, Logger
+from ..util import draw_gaussian_pyramid, get_images, get_bbox_dims, config, Algorithm, Logger
 from icecream import ic
 
 cfg = config(Algorithm.TEMPLATE_MATCHING)
@@ -97,43 +97,6 @@ def preprocess(pyramid):
             scale_levels[i] = img
         pyramid[rotation] = scale_levels
     return pyramid
-
-
-def get_bbox_dims(img):
-    """
-	Finds dimensions for bounding boxes in passed in image.
-
-	Parameters
-	----------
-	img : np.ndarray
-	 return value of cv2.imread(img_path), a 3d numpy array
-
-	Returns
-	-------
-	dims_list: list
-	 list containing width and height of each bbox in image as tuples [(width, height), ....]
-	"""
-    dims_list = []
-    new = img.copy()
-
-    # Blur the image
-    blur = cv2.GaussianBlur(new, (11, 11), 3)
-    # Convert the image to grayscale
-    grey = cv2.cvtColor(blur, cv2.COLOR_BGR2GRAY)
-
-    # Convert the grayscale image to binary
-    ret, binary = cv2.threshold(grey, 250, 255, cv2.THRESH_BINARY)
-    contours, hierarchy = cv2.findContours(~binary, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-
-    for contour in contours:
-        x, y, w, h = cv2.boundingRect(contour)
-        if (w * h) > 500:
-            dims = (w, h)
-            cv2.rectangle(new, (x, y), (x + w, y + h), (255, 0, 0), 5)
-            dims_list.append(dims)
-
-    return dims_list
-
 
 def extract_templates_from_pyramid(pyramid, bboxes, option='closest'):
     """

@@ -144,7 +144,7 @@ class Tester:
                 false_positives = len([class_ for class_ in class_segmented if class_ not in class_labels])
                 false_negatives = len([class_ for class_ in class_labels if class_ not in class_segmented])
                 true_negatives = negatives - false_negatives - false_positives
-            
+
                 false_positive_rate = false_positives/negatives
                 true_positive_rate = true_positives/len(class_labels)
                 accuracy = ((true_positives+true_negatives)/(true_positives+true_negatives+false_positives+false_negatives))*100
@@ -163,6 +163,7 @@ class Tester:
 
                 LOGGER.SUCCESS(f'match for img: {img_path}')
                 passes += 1
+                success = "SUCCESS"
             else:
                 LOGGER.ERROR(f'img_f: {img_path} failed, not all classes match')
                 fails += 1
