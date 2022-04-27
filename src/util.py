@@ -212,8 +212,8 @@ def get_bbox_dims(img, sift=False):
 
 
     # Convert the grayscale image to binary
-    ret, binary = cv2.threshold(grey, 250, 255, cv2.THRESH_BINARY)
-    contours, hierarchy = cv2.findContours(~binary, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    _, binary = cv2.threshold(grey, 250, 255, cv2.THRESH_BINARY)
+    contours, _ = cv2.findContours(~binary, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
     i = 0
     for contour in contours:
@@ -234,3 +234,28 @@ def get_bbox_dims(img, sift=False):
         return dims_dict
 
     return dims_list
+
+
+def get_bbox_iou(bbox1, bbox2):
+    if (bbox1[0] == bbox2[0]).all() and (bbox1[1] == bbox2[1]).all():
+        return 1.0
+
+    # intersection area (inner pixels)
+    x_left = max(bbox1[0][0], bbox2[0][0])
+    y_top = max(bbox1[0][1], bbox2[0][1])
+    x_right = min(bbox1[1][0], bbox2[1][0])
+    y_bottom = min(bbox1[1][1], bbox2[1][1])
+
+    if x_right < x_left or y_bottom < y_top:
+        return 0.0
+
+    intersection_area = (x_right - x_left + 1) * (y_bottom - y_top + 1)
+
+    # area for each bbox
+    bbox1_area = (bbox1[1][0] - bbox1[0][0] + 1) * (bbox1[1][1] - bbox1[0][1] + 1)
+    bbox2_area = (bbox2[1][0] - bbox2[0][0] + 1) * (bbox2[1][1] - bbox2[0][1] + 1)
+
+    # inclusion-exclusion principle
+    union_area = float(bbox1_area + bbox2_area - intersection_area)
+
+    return intersection_area / union_area

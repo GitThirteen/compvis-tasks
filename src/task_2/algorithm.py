@@ -4,11 +4,12 @@ import sys
 import argparse
 import re
 import numpy as np
-from ..util import draw_gaussian_pyramid, get_images, get_bbox_dims, config, Algorithm, Logger
+from ..util import Algorithm, Logger, draw_gaussian_pyramid, get_images, get_bbox_dims, get_bbox_iou, config
 from icecream import ic
 
 cfg = config(Algorithm.TEMPLATE_MATCHING)
 LOGGER = Logger.get()
+
 
 def create_gaussian_pyramid(image, rotations, scale_levels):
     """
@@ -65,6 +66,22 @@ def create_gaussian_pyramid(image, rotations, scale_levels):
         draw_gaussian_pyramid(pyramid, scale_levels, rotations)
 
     return pyramid
+
+
+def generate_pyramids(training_data_path):
+    templates = get_images(training_data_path)
+
+    rots = cfg.getint('PyramidRotations')
+    scale = cfg.getint('ScaleLevels')
+
+    # Generates a pyramid for all templates
+    pyramids = [ ]
+
+    for template in templates:
+        pyramid = create_gaussian_pyramid(template, rots, scale)
+        pyramids.append(pyramid)
+
+    return pyramids
 
 
 def preprocess(pyramid):
@@ -229,7 +246,7 @@ def template_match(img, N, template_dict):
 
     # loop over classes
     for class_, template_pyramid in template_dict.items():
-        class_bboxes = []
+        # class_bboxes = []
         # initialise score dict to keep track of template giving highest score
         class_scores_dict = {}
 
@@ -287,7 +304,7 @@ def template_match(img, N, template_dict):
                                 bottom_right = np.asarray((top_left[0] + w, top_left[1] + h))
                                 class_scores_dict[meth]['bbox'] = (top_left, bottom_right)
 
-                # ic(class_,class_scores_dict[meth]['score']/1e6)
+                # LOGGER.DEBUG_IC(class_,class_scores_dict[meth]['score']/1e6)
                 # cv2.rectangle(img2,top_left,bottom_right,(255, 0, 0), 2)
                 # cv2.imshow('bbox found',img2)
                 # cv2.imshow('temp',template)
@@ -352,28 +369,6 @@ def template_match(img, N, template_dict):
     return results_dict
 
 
-def get_bbox_iou(bbox1, bbox2):
-    if (bbox1[0] == bbox2[0]).all() and (bbox1[1] == bbox2[1]).all():
-        return 1.0
-
-    x_left = max(bbox1[0][0], bbox2[0][0])
-    y_top = max(bbox1[0][1], bbox2[0][1])
-    x_right = min(bbox1[1][0], bbox2[1][0])
-    y_bottom = min(bbox1[1][1], bbox2[1][1])
-
-    if x_right < x_left or y_bottom < y_top:
-        return 0.0
-
-    intersection_area = (x_right - x_left + 1) * (y_bottom - y_top + 1)
-
-    bbox1_area = (bbox1[1][0] - bbox1[0][0] + 1) * (bbox1[1][1] - bbox1[1][0] + 1)
-    bbox2_area = (bbox2[1][0] - bbox2[0][0] + 1) * (bbox2[1][1] - bbox2[1][0] + 1)
-
-    iou = intersection_area / float(bbox1_area + bbox2_area - intersection_area)
-
-    return iou
-
-
 def draw(img, results_dict):
     """
 	Draws a bounding box around each detected object, including its class label.
@@ -408,6 +403,7 @@ def run(png_path, pyramids):
 
     # Find bbox dims in training image
     test_image_bboxes = get_bbox_dims(test_image)
+    LOGGER.DEBUG_IC(test_image_bboxes)
     N = len(test_image_bboxes)
     # Extract image classes from file names
     file_names = os.listdir(cfg.get('TrainingDataPath'))
@@ -436,22 +432,6 @@ def run(png_path, pyramids):
         draw(test_image, final_bboxes_dict)
 
     return final_bboxes_dict
-
-
-def generate_pyramids(training_data_path):
-    templates = get_images(training_data_path)
-
-    rots = cfg.getint('PyramidRotations')
-    scale = cfg.getint('ScaleLevels')
-
-    # Generates a pyramid for all templates
-    pyramids = [ ]
-
-    for template in templates:
-        pyramid = create_gaussian_pyramid(template, rots, scale)
-        pyramids.append(pyramid)
-
-    return pyramids
 
 
 def main():

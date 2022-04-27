@@ -2,8 +2,9 @@ import sys
 import os
 import time
 import csv
+import cv2
 import numpy as np
-from src.util import Algorithm, Logger, config, sort_ascending, parse_annotation_txt_files
+from src.util import Algorithm, Logger, config, sort_ascending, parse_annotation_txt_files, get_bbox_iou
 from src.task_1 import algorithm as find_angle
 from src.task_2 import algorithm as template_match
 from src.task_3 import algorithm as sift
@@ -77,8 +78,8 @@ class Tester:
             path = self.img_path + '/' + name
             theta = find_angle.run(path)
 
-            angle = round(float(angle))
-            theta = round(float(theta))
+            angle = float(angle)
+            theta = round(theta, 2)
 
             LOGGER.INFO(name)
             LOGGER.INFO(f'Expected angle: {angle}°')
@@ -124,7 +125,7 @@ class Tester:
 
         if self.config.getboolean('PreciseData'):
             num_templates = len(templates)
-            header = ['Image', 'Runtime', 'SUCCESS/FAIL', 'False Positive Rate', 'True Positive Rate', 'Accuracy']
+            header = ['Image', 'Runtime', 'OUTCOME', 'Overlap', 'False Positive Rate', 'True Positive Rate', 'Precision', 'Recall']
             data = []
 
         start_time = time.time()
@@ -136,35 +137,49 @@ class Tester:
             class_labels = set(labels_dict.keys())
             class_segmented = set(results_dict.keys())
 
-            if self.config.getboolean('PreciseData'):
-                success = "FAIL"
+            overlaps = [ ]
 
-                negatives = num_templates-len(class_labels)
+            if self.config.getboolean('PreciseData'):
+                negatives = num_templates - len(class_labels)
                 true_positives = len([class_ for class_ in class_segmented if class_ in class_labels])
                 false_positives = len([class_ for class_ in class_segmented if class_ not in class_labels])
                 false_negatives = len([class_ for class_ in class_labels if class_ not in class_segmented])
-                true_negatives = negatives - false_negatives - false_positives
 
-                false_positive_rate = false_positives/negatives
-                true_positive_rate = true_positives/len(class_labels)
-                accuracy = ((true_positives+true_negatives)/(true_positives+true_negatives+false_positives+false_negatives))*100
+                fpr = (false_positives / negatives) * 100
+                tpr = (true_positives / len(class_labels)) * 100
+                precision = (true_positives / (true_positives + false_positives)) * 100
+                recall = (true_positives / (true_positives + false_negatives)) * 100
+
+                #accuracy = ((true_positives+true_negatives)/(true_positives+true_negatives+false_positives+false_negatives))*100
+            
+            #if class_labels == class_segmented:
+
+            for label in class_labels:
+                if (label not in results_dict) or (label not in labels_dict):
+                    # assuming 0 overlap if wrongly labeled or label not found
+                    overlaps.append(0)
+                    continue
+
+                segmented_bbox = results_dict[label]
+                measured_bbox = labels_dict[label]
+
+                overlap = get_bbox_iou(segmented_bbox, measured_bbox) * 100
+                overlaps.append(overlap)
+
+                # check if segmented bbox within 30 pixels of real one
+                top_left_diff = (segmented_bbox[0] - measured_bbox[0]) ** 2
+                bottom_right_diff = (segmented_bbox[1] - measured_bbox[1]) ** 2
+                total_diff = np.sum((top_left_diff + bottom_right_diff)) ** 0.5
+
+                if total_diff > 10:
+                    LOGGER.WARNING(f'BBOX for class: {label} not a good match')
 
             if class_labels == class_segmented:
-                for class_ in class_labels:
-                    segmented_bbox = results_dict[class_]
-                    measured_bbox = labels_dict[class_]
-                    # check if segmented bbox within 30 pixels of real one
-                    top_left_diff = (segmented_bbox[0] - measured_bbox[0]) ** 2
-                    bottom_right_diff = (segmented_bbox[1] - measured_bbox[1]) ** 2
-                    total_diff = np.sum((top_left_diff + bottom_right_diff)) ** 0.5
-
-                    if total_diff > 20:
-                        LOGGER.WARNING(f'BBOX for class: {class_} not a good match')
-
+                outcome = 'SUCCESS'
                 LOGGER.SUCCESS(f'match for img: {img_path}')
                 passes += 1
-                success = "SUCCESS"
             else:
+                outcome = 'FAIL'
                 LOGGER.ERROR(f'img_f: {img_path} failed, not all classes match')
                 fails += 1
 
@@ -172,8 +187,9 @@ class Tester:
             LOGGER.INFO(f'RUNTIME: {invid_end_time}s\n')
 
             if self.config.getboolean('PreciseData'):
-                LOGGER.INFO(f'TPR: {round(true_positive_rate*100, 2)}% | FPR: {round(false_positive_rate*100, 2)}% | Accuracy: {round(accuracy, 2)}%\n')
-                data.append([f'Image {i+1}', f'{invid_end_time}s', success, f'{round(false_positive_rate*100, 2)}%', f'{round(true_positive_rate*100, 2)}%', f'{round(accuracy, 2)}%'])
+                overlap = round(np.sum(overlaps) / len(overlaps), 2)
+                LOGGER.INFO(f'Overlap: {overlap}% | TPR: {tpr}% | FPR: {fpr}% | Precision: {precision}% | Recall: {recall}%\n')
+                data.append([f'Image {i+1}', f'{invid_end_time}s', outcome, f'{overlap}%', f'{fpr}%', f'{tpr}%', f'{precision}%', f'{recall}%'])
 
         end_time = round(time.time() - start_time, 3)
         if end_time > 60:
