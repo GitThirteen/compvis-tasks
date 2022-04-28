@@ -185,6 +185,8 @@ def draw_gaussian_pyramid(pyramid, levels, rotations) -> None:
     plt.tight_layout()
     plt.show()
 
+
+
 def get_bbox_dims(img, sift=False):
     """
 	Finds dimensions for bounding boxes in passed in image.
@@ -221,11 +223,6 @@ def get_bbox_dims(img, sift=False):
             dims_list.append(dims)
             i += 1
 
-    # cv2.imshow('bboxs detected from raw image',new)
-    # cv2.waitKey(0)
-
-    # cv2.imshow('bboxs detected from raw image',new)
-    # cv2.waitKey(0)
     if sift:
         return dims_dict
 

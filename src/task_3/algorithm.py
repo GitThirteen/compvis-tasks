@@ -2,11 +2,10 @@ import os
 import re
 import cv2
 import sys
-import matplotlib.pyplot as plt
 import numpy as np
 from icecream import ic
 from skimage.measure import ransac
-from skimage.transform import ProjectiveTransform, AffineTransform
+from skimage.transform import AffineTransform
 
 from ..util import config, Algorithm, Logger, get_bbox_dims
 
@@ -103,6 +102,7 @@ def get_template_kp_des(templates_dict):
         templates_dict_kp_des[class_] = kp_des
 
     return templates_dict_kp_des
+
 
 def sift_matching(img1, template, template_kp, template_des):
     # Input : image1, template in opencv format, and template key points and descriptors

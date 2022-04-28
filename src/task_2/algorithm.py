@@ -72,7 +72,7 @@ def generate_pyramids(training_data_path):
     templates = get_images(training_data_path)
 
     rots = cfg.getint('PyramidRotations')
-    scale = cfg.getint('ScaleLevels')
+    scale = cfg.getint('PyramidLevels')
 
     # Generates a pyramid for all templates
     pyramids = [ ]

@@ -2,8 +2,8 @@ import sys
 import os
 import time
 import csv
-import cv2
 import numpy as np
+import cv2
 from src.util import Algorithm, Logger, config, sort_ascending, parse_annotation_txt_files, get_bbox_iou
 from src.task_1 import algorithm as find_angle
 from src.task_2 import algorithm as template_match
@@ -145,14 +145,12 @@ class Tester:
                 false_positives = len([class_ for class_ in class_segmented if class_ not in class_labels])
                 false_negatives = len([class_ for class_ in class_labels if class_ not in class_segmented])
 
-                fpr = (false_positives / negatives) * 100
-                tpr = (true_positives / len(class_labels)) * 100
-                precision = (true_positives / (true_positives + false_positives)) * 100
-                recall = (true_positives / (true_positives + false_negatives)) * 100
-
-                #accuracy = ((true_positives+true_negatives)/(true_positives+true_negatives+false_positives+false_negatives))*100
+                fpr = round((false_positives / negatives) * 100, 3)
+                tpr = round((true_positives / len(class_labels)) * 100, 3)
+                precision = round((true_positives / (true_positives + false_positives)) * 100, 3)
+                recall = round((true_positives / (true_positives + false_negatives)) * 100, 3)
             
-            #if class_labels == class_segmented:
+            # img = cv2.imread(img_path)
 
             for label in class_labels:
                 if (label not in results_dict) or (label not in labels_dict):
@@ -163,17 +161,15 @@ class Tester:
                 segmented_bbox = results_dict[label]
                 measured_bbox = labels_dict[label]
 
+                # TASK 3 BBOX
+                # cv2.rectangle(img, (segmented_bbox[0][0], segmented_bbox[0][1]), (segmented_bbox[1][0], segmented_bbox[1][1]), (255, 0, 0), 2)
+                # cv2.rectangle(img, (measured_bbox[0][0], measured_bbox[0][1]), (measured_bbox[1][0], measured_bbox[1][1]), (0, 0, 255), 2)
+
                 overlap = get_bbox_iou(segmented_bbox, measured_bbox) * 100
                 overlaps.append(overlap)
 
-                # check if segmented bbox within 30 pixels of real one
-                top_left_diff = (segmented_bbox[0] - measured_bbox[0]) ** 2
-                bottom_right_diff = (segmented_bbox[1] - measured_bbox[1]) ** 2
-                total_diff = np.sum((top_left_diff + bottom_right_diff)) ** 0.5
-
-                if total_diff > 10:
-                    LOGGER.WARNING(f'BBOX for class: {label} not a good match')
-
+            # cv2.imshow('task 3 bboxes', img)
+            # cv2.waitKey(0)
             if class_labels == class_segmented:
                 outcome = 'SUCCESS'
                 LOGGER.SUCCESS(f'match for img: {img_path}')
