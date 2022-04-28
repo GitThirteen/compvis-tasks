@@ -260,9 +260,6 @@ def template_match(img, N, template_dict):
                     min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
 
                     # update score dict if current template has a better similarity / match
-                    '''
-					make this block more efficient via a function to populate dict?
-					'''
                     if template_idx == 0:
                         # initialise class score dict if first iteration in template loop
                         if meth in ['cv2.TM_SQDIFF', 'cv2.TM_SQDIFF_NORMED']:
