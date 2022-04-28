@@ -87,7 +87,7 @@ def generate_pyramids(training_data_path):
 def preprocess(pyramid):
     """
 	Sets the background to 0 (black) for each scaled and rotated template.
-	We assume that the template image itself does not get affected by this.
+	We assume that the object on the template itself does not get affected by this.
 
 	Parameters
 	----------
@@ -117,7 +117,7 @@ def preprocess(pyramid):
 
 def extract_templates_from_pyramid(pyramid, bboxes, option='closest'):
     """
-	TODO Description
+	Extracts 
 	Options: closest, upper, lower, both
 
 	Parameters:
@@ -128,7 +128,10 @@ def extract_templates_from_pyramid(pyramid, bboxes, option='closest'):
 		list of (w,h) tuples for the bboxes found of objects in the image
 
 	option : str
-		closest : returns scales
+		closest : picks index closest to diagonal
+        upper : picks index with diag length above the one of the diagonal
+        lower : picks index with diag length below the one of the diagonal
+        both : upper & lower
 
 	Returns:
 	--------
@@ -225,19 +228,6 @@ def template_match(img, N, template_dict):
 					value - list containing bbox corners for cv2.rectangles [upper_left, bottom_right]
 
 	"""
-    # TODO
-    # IMPLEMENT DICTs
-    # test code
-    # Figure out way to pick the 'best' result from all the methods results. Define best ? Median bbox values?
-    # check how long for loop takes to loop over all templates, might wanna do a 3d convolution instead of several
-    # 2d convolves for performance
-    # - research what the difference between each method is
-    # figure out where the threshold is set for the response - will a 'match' always be found?
-
-    # EDGE CASES:
-    # no match found
-    # multiple matches found
-
     # methods = ['cv2.TM_CCOEFF', 'cv2.TM_CCOEFF_NORMED', 'cv2.TM_CCORR',
     # 'cv2.TM_CCORR_NORMED', 'cv2.TM_SQDIFF', 'cv2.TM_SQDIFF_NORMED']
     methods = ['cv2.TM_SQDIFF']
@@ -405,27 +395,30 @@ def run(png_path, pyramids):
     test_image_bboxes = get_bbox_dims(test_image)
     LOGGER.DEBUG_IC(test_image_bboxes)
     N = len(test_image_bboxes)
+
     # Extract image classes from file names
     file_names = os.listdir(cfg.get('TrainingDataPath'))
     class_names = [re.search('-(.*)\.', name).group(1) for name in file_names]
 
+    # filter only needed templates
     templates = {}
-    i = 0
-    for pyramid in pyramids:
-        for _, scaled_img_list in pyramid.items():
-            for scaled_img in scaled_img_list:
-                _, thresh = cv2.threshold(cv2.cvtColor(scaled_img, cv2.COLOR_BGR2GRAY), 245, 255, cv2.THRESH_BINARY)
-                scaled_img[thresh == 255] = 0
-
+    for i, pyramid in enumerate(pyramids):
         class_name = class_names[i]
         templates[class_name] = extract_templates_from_pyramid(pyramid, test_image_bboxes)
-        i += 1
 
-    # Setting background to 0
+    # set background to 0 for extracted templates
+    for template_levels_dict in templates.values():
+        for template_levels in template_levels_dict.values():
+            for template in template_levels:
+                _, thresh = cv2.threshold(cv2.cvtColor(np.array(template), cv2.COLOR_BGR2GRAY), 245, 255, cv2.THRESH_BINARY)
+                template[thresh == 255] = 0
+
+    # set background to 0 for test image
     transparent_test_image = test_image.copy()
     _, thresh = cv2.threshold(cv2.cvtColor(transparent_test_image, cv2.COLOR_BGR2GRAY), 245, 255, cv2.THRESH_BINARY)
     transparent_test_image[thresh == 255] = 0
 
+    # template match
     final_bboxes_dict = template_match(transparent_test_image, N, templates)
 
     if cfg.getboolean('ShowResults'):

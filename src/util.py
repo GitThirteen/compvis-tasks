@@ -205,12 +205,8 @@ def get_bbox_dims(img, sift=False):
 
     # Blur the image
     blur = cv2.GaussianBlur(new, (11, 11), 3)
-    if sift:
-        grey = blur
-    else:
-        grey = cv2.cvtColor(blur, cv2.COLOR_BGR2GRAY)
-
-
+    grey = blur if sift else cv2.cvtColor(blur, cv2.COLOR_BGR2GRAY)
+ 
     # Convert the grayscale image to binary
     _, binary = cv2.threshold(grey, 250, 255, cv2.THRESH_BINARY)
     contours, _ = cv2.findContours(~binary, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
