@@ -174,7 +174,12 @@ def draw_gaussian_pyramid(pyramid, levels, rotations) -> None:
         rot_drawn = False
         for lvl in range(levels - 1, -1, -1):
             # key = '' + str(rot) + '_' + str(lvl)
-            el = axarr[levels - lvl - 1, rot]
+            print(lvl)
+            print(rot)
+            if rotations > 0:
+                el = axarr[levels - lvl - 1, rot]
+            else:
+                el = axarr[levels - lvl - 1]
             el.imshow(pyramid[rot][lvl])
             el.axis('off')
 

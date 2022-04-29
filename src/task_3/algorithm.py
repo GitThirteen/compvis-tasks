@@ -14,7 +14,6 @@ LOGGER = Logger.get()
 
 def find_bbox_idx(src_pts, obj_bboxs_dict):
     """
-    EXPERIMENTAL
     takes a list of points and bins them according to regions defined by obj_bboxs
     returns idx of region with most points.
 
@@ -51,7 +50,6 @@ def find_bbox_idx(src_pts, obj_bboxs_dict):
 
 def read_template_dir(training_data_path):
     """
-    EXPERIMENTAL
     Reads pngs at training data path using open cv, imgs are converted to grayscale
 
     Parameters:

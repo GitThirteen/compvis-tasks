@@ -2,6 +2,7 @@ import cv2
 import os
 import sys
 import argparse
+import math
 import re
 import numpy as np
 from ..util import Algorithm, Logger, draw_gaussian_pyramid, get_images, get_bbox_dims, get_bbox_iou, config
@@ -38,8 +39,7 @@ def create_gaussian_pyramid(image, rotations, scale_levels):
 
     # fetch height, width of image & sigma and k for gaussian kernel
     (h, w) = image.shape[:2]
-    sigma = cfg.getfloat('GaussianSigma')
-    k = cfg.getint('GaussianKernelSize')
+    
 
     # rotation step size
     step = 360 / rotations
@@ -53,6 +53,10 @@ def create_gaussian_pyramid(image, rotations, scale_levels):
         # add first "default" image as pyramid base
         pyramid[rot] = [img]
 
+        # gaussian kernel parameters
+        sigma = cfg.getfloat('GaussianSigma')
+        k = cfg.getint('GaussianKernelSize')
+
         # loop for the rest of the pyramid
         for _ in range(1, scale_levels):
             # blur image with gaussian and remove all even rows and cols (subsampling)
@@ -61,7 +65,11 @@ def create_gaussian_pyramid(image, rotations, scale_levels):
             img = np.delete(img, range(1, img.shape[1], 2), axis=1)
             # add new image to pyramid
             pyramid[rot].append(img)
-
+            # update gaussian kernel parameters
+            # (Not sure about this one, so let's use the static values - they work)
+            # sigma *= 0.5
+            # k = 2 * math.ceil(3 * sigma) + 1
+            
     if cfg.getboolean('ShowPyramid'):
         draw_gaussian_pyramid(pyramid, scale_levels, rotations)
 
@@ -404,19 +412,19 @@ def run(png_path, pyramids):
         templates[class_name] = extract_templates_from_pyramid(pyramid, test_image_bboxes)
 
     # set background to 0 for extracted templates
-    for template_levels_dict in templates.values():
-        for template_levels in template_levels_dict.values():
-            for template in template_levels:
-                _, thresh = cv2.threshold(cv2.cvtColor(np.array(template), cv2.COLOR_BGR2GRAY), 245, 255, cv2.THRESH_BINARY)
-                template[thresh == 255] = 0
+    # for template_levels_dict in templates.values():
+    #     for template_levels in template_levels_dict.values():
+    #         for template in template_levels:
+    #             _, thresh = cv2.threshold(cv2.cvtColor(np.array(template), cv2.COLOR_BGR2GRAY), 245, 255, cv2.THRESH_BINARY)
+    #             template[thresh == 255] = 0
 
     # set background to 0 for test image
-    transparent_test_image = test_image.copy()
-    _, thresh = cv2.threshold(cv2.cvtColor(transparent_test_image, cv2.COLOR_BGR2GRAY), 245, 255, cv2.THRESH_BINARY)
-    transparent_test_image[thresh == 255] = 0
+    # transparent_test_image = test_image.copy()
+    # _, thresh = cv2.threshold(cv2.cvtColor(transparent_test_image, cv2.COLOR_BGR2GRAY), 245, 255, cv2.THRESH_BINARY)
+    # transparent_test_image[thresh == 255] = 0
 
     # template match
-    final_bboxes_dict = template_match(transparent_test_image, N, templates)
+    final_bboxes_dict = template_match(test_image, N, templates)
 
     if cfg.getboolean('ShowResults'):
         draw(test_image, final_bboxes_dict)
